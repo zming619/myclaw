@@ -1,0 +1,93 @@
+- generic [ref=e2]:
+  - generic [ref=e5]:
+    - generic [ref=e8]:
+      - img "MyClaw claw logo" [ref=e10]
+      - generic [ref=e12]: MyClaw
+    - generic [ref=e14]:
+      - generic [ref=e15]: 管理菜单
+      - list [ref=e17]:
+        - listitem [ref=e18]:
+          - link "模型设置" [ref=e19] [cursor=pointer]:
+            - /url: /models
+            - img [ref=e20]
+            - generic [ref=e23]: 模型设置
+        - listitem [ref=e24]:
+          - link "微信自动回复" [ref=e25] [cursor=pointer]:
+            - /url: /wechat-auto-replies
+            - img [ref=e26]
+            - generic [ref=e30]: 微信自动回复
+        - listitem [ref=e31]:
+          - link "系统设置" [ref=e32] [cursor=pointer]:
+            - /url: /settings
+            - img [ref=e33]
+            - generic [ref=e36]: 系统设置
+    - generic [ref=e38]:
+      - generic [ref=e39]: 当前后端基线
+      - generic [ref=e40]: PostgreSQL 18 + pgvector
+      - generic [ref=e41]: 未启用登录校验
+    - button "Toggle Sidebar" [ref=e42]
+  - main [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - button "Toggle Sidebar" [ref=e46]:
+          - img
+          - generic [ref=e47]: Toggle Sidebar
+        - generic [ref=e48]:
+          - img "MyClaw claw logo" [ref=e50]
+          - generic [ref=e52]: MyClaw
+      - generic [ref=e53]: 预留登录鉴权
+    - generic [ref=e55]:
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - heading "模型设置" [level=1] [ref=e58]
+          - generic [ref=e59]: 3 个模型服务商
+        - paragraph [ref=e60]: 集中维护 OpenAI、通义千问、DeepSeek 的接口地址、密钥和模型参数。后续微信自动回复统一从这里读取模型配置。
+      - generic [ref=e61]:
+        - tablist [ref=e62]:
+          - tab "OpenAI" [selected] [ref=e63]
+          - tab "通义千问" [ref=e64]
+          - tab "DeepSeek" [active] [ref=e65]
+        - tabpanel "OpenAI" [ref=e66]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - generic [ref=e69]: OpenAI
+              - generic [ref=e70]: 适合接 OpenAI 兼容接口，也方便后续接更多兼容服务商。
+            - generic [ref=e71]:
+              - generic [ref=e73]:
+                - group [ref=e74]:
+                  - generic [ref=e75]: 启用接口
+                  - generic [ref=e77]:
+                    - switch "启用接口" [ref=e78]
+                    - checkbox
+                    - paragraph [ref=e79]: 启用后，系统才会允许调用这个模型配置。
+                - group [ref=e80]:
+                  - generic [ref=e81]: Base URL
+                  - generic [ref=e82]:
+                    - textbox "Base URL" [ref=e83]: https://api.openai.com/v1
+                    - paragraph [ref=e84]: 填写服务端要调用的 OpenAI 兼容或原生 API 地址。
+                - group [ref=e85]:
+                  - generic [ref=e86]: API Key
+                  - generic [ref=e87]:
+                    - textbox "API Key" [ref=e88]
+                    - paragraph [ref=e89]: 当前直接存入 settings 表，后续可切到密钥服务。
+                - group [ref=e90]:
+                  - generic [ref=e91]: 对话模型
+                  - generic [ref=e92]:
+                    - textbox "对话模型" [ref=e93]: gpt-4.1-mini
+                    - paragraph [ref=e94]: 微信自动回复默认会调用这里配置的对话模型。
+                - group [ref=e95]:
+                  - generic [ref=e96]: 视觉模型
+                  - generic [ref=e97]:
+                    - textbox "视觉模型" [ref=e98]
+                    - paragraph [ref=e99]: 用于 computer use 截图读消息；留空时默认复用对话模型。
+                - group [ref=e100]:
+                  - generic [ref=e101]: Embedding 模型
+                  - generic [ref=e102]:
+                    - textbox "Embedding 模型" [ref=e103]: text-embedding-3-small
+                    - paragraph [ref=e104]: 用于后续 pgvector 知识库的向量化。
+                - group [ref=e105]:
+                  - generic [ref=e106]: 超时时间
+                  - generic [ref=e107]:
+                    - spinbutton "超时时间" [ref=e108]: "60"
+                    - paragraph [ref=e109]: 单次模型调用超时秒数，建议控制在 30 到 90 秒。
+              - button "保存 OpenAI 配置" [ref=e111]
