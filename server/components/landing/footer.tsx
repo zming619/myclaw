@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCloud } from "@fortawesome/free-solid-svg-icons";
 
 const footerLinks = [
   {
@@ -35,7 +37,7 @@ export function Footer() {
           <div className="space-y-6 text-left">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb] text-white shadow-lg shadow-[#2563eb]/20 group-hover:scale-105 transition-transform">
-                <span className="text-xl font-bold">C</span>
+                <FontAwesomeIcon icon={faCloud} className="text-xl" />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">
                 星云 <span className="text-[#2563eb]">Claw</span>

@@ -1,7 +1,12 @@
 "use client";
 
-import { Download, Smartphone, QrCode } from "lucide-react";
+import { QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { 
+  faWindows,
+  faWeixin
+} from "@fortawesome/free-brands-svg-icons";
 
 export function CTA() {
   return (
@@ -19,8 +24,9 @@ export function CTA() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {/* Windows Download */}
           <div className="p-10 rounded-3xl bg-white border border-border shadow-lg flex flex-col items-center text-center space-y-6">
-            <div className="h-16 w-16 rounded-2xl bg-brand/10 text-brand flex items-center justify-center">
-              <Download className="h-8 w-8" />
+            <div className="h-16 w-16 rounded-2xl text-brand flex items-center justify-center">
+              {/* <Download className="h-8 w-8" /> */}
+              <FontAwesomeIcon icon={faWindows} className="text-5xl text-blue-400" />
             </div>
             <div className="space-y-2">
               <h3 className="text-2xl font-bold">Windows 客户端</h3>
@@ -36,8 +42,9 @@ export function CTA() {
 
           {/* Mobile Command (WeChat Mini Program) */}
           <div className="p-10 rounded-3xl bg-white border border-border shadow-lg flex flex-col items-center text-center space-y-6">
-            <div className="h-16 w-16 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center">
-              <Smartphone className="h-8 w-8" />
+            <div className="h-16 w-16 rounded-2xl text-green-600 flex items-center justify-center">
+              {/* <Smartphone className="h-8 w-8" /> */}
+              <FontAwesomeIcon icon={faWeixin} className="text-5xl text-green-400" />
             </div>
             <div className="space-y-4">
               <h3 className="text-2xl font-bold">移动指挥端 (小程序)</h3>

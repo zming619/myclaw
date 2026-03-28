@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCloud } from "@fortawesome/free-solid-svg-icons";
 
 const navLinks = [
   { name: "官网首页", href: "#" },
@@ -21,7 +23,7 @@ export function Navbar() {
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white shadow-lg shadow-brand/20 group-hover:scale-105 transition-transform">
-               <span className="text-xl font-bold">C</span>
+               <FontAwesomeIcon icon={faCloud} className="text-xl" />
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-900">
               星云 <span className="text-brand">Claw</span>

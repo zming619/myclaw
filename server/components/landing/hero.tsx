@@ -1,7 +1,14 @@
-"use client";
-
-import { CheckCircle2, Zap, QrCode, Bot } from "lucide-react";
+import { Reveal } from "@/components/ui/reveal";
 import { Button } from "@/components/ui/button";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { 
+  faBoltLightning, 
+  faQrcode, 
+  faCircleCheck, 
+  faCircleNotch, 
+  faRobot 
+} from "@fortawesome/free-solid-svg-icons";
+import { faWindows } from "@fortawesome/free-brands-svg-icons";
 
 export function Hero() {
   return (
@@ -12,49 +19,53 @@ export function Hero() {
       <div className="container mx-auto px-4 sm:px-8">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:items-center">
           <div className="flex flex-col gap-8 text-left">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-4 py-1.5 text-sm font-medium text-[#2563eb]">
-              <Zap className="h-4 w-4 fill-[#2563eb]" />
-              AI + RPA 全链路自动化运营平台
-            </div>
+            <Reveal delay={0}>
+              <div className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-4 py-1.5 text-sm font-medium text-[#2563eb]">
+                <FontAwesomeIcon icon={faBoltLightning} className="text-xs" />
+                AI + RPA 全链路自动化运营平台
+              </div>
+            </Reveal>
             
-            <div className="flex flex-col gap-4">
-              <h1 className="text-[52px] font-bold tracking-tight text-slate-900 leading-[1.1] sm:text-6xl lg:text-7xl">
-                一部手机 <br />
-                <span className="text-[#0ea5e9]">控制多台电脑干活</span>
-              </h1>
-              <p className="max-w-xl text-lg text-slate-500 sm:text-lg">
-                集 RPA流程自动化、AI智能对话、公域获客、私域运营、全网矩阵分发 及 RAG知识库 于一体的企业级<span className="font-bold">超级</span>数字员工。
-              </p>
-            </div>
+            <Reveal delay={100}>
+              <div className="flex flex-col gap-4">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 leading-[1.1] sm:text-6xl lg:text-7xl">
+                  一部手机 <br />
+                  <span className="text-[#0ea5e9]">控制多台电脑干活</span>
+                </h1>
+                <p className="max-w-xl text-lg text-slate-500 sm:text-lg">
+                  集 RPA流程自动化、AI智能对话、公域获客、私域运营、全网矩阵分发 及 RAG知识库 于一体的企业级<span className="font-bold">超级</span>数字员工。
+                </p>
+              </div>
+            </Reveal>
 
             <div className="flex flex-col gap-6">
-              <div className="flex flex-wrap gap-4">
+              <Reveal delay={200} className="flex flex-wrap gap-4">
                 <Button size="lg" className="h-16 gap-3 bg-[#2563eb] text-white px-8 text-lg font-bold hover:bg-[#2563eb]/90 border-0 rounded-xl shadow-lg shadow-blue-500/20">
-                  <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M0 3.449L9.75 2.1V11.7H0V3.449zm0 17.101L9.75 21.9V12.3H0v8.25zm10.5-18.452L24 0v11.7h-13.5V2.098zM24 12.3L10.5 12.3V24l13.5-2.1V12.3z"/></svg>
+                  <FontAwesomeIcon icon={faWindows} className="text-xl" />
                   Windows 客户端下载
                 </Button>
                 <Button size="lg" variant="outline" className="h-16 gap-3 border-slate-200 px-8 text-lg font-bold hover:bg-slate-50 rounded-xl">
-                  <QrCode className="h-5 w-5" />
+                  <FontAwesomeIcon icon={faQrcode} className="text-lg" />
                   手机移动端控制
                 </Button>
-              </div>
+              </Reveal>
               
-              <div className="flex flex-wrap gap-6">
+              <Reveal delay={300} className="flex flex-wrap gap-6">
                 {[
                   { label: "版本 v1.3.22" },
                   { label: "大小 1.58GB" },
                   { label: "支持 Win10/11" }
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-2 text-sm font-bold text-slate-500">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <FontAwesomeIcon icon={faCircleCheck} className="text-[#10b981] text-base" />
                     {item.label}
                   </div>
                 ))}
-              </div>
+              </Reveal>
             </div>
           </div>
 
-          <div className="relative">
+          <Reveal delay={400} className="relative">
             <div className="relative h-[480px] w-full max-w-[640px] perspective-[1000px]">
               {/* Task Monitor Mockup */}
               <div className="absolute right-0 top-10 w-[520px] rounded-3xl bg-slate-950 p-8 shadow-2xl border border-white/10 space-y-6">
@@ -68,32 +79,22 @@ export function Hero() {
                 </div>
                 <div className="space-y-4">
                   {[
-                    { text: "WeChat 自动回复 · 运行中", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/20" },
+                    { text: "WeChat 自动回复 · 运行中", icon: faCircleCheck, color: "text-[#10b981]", bg: "bg-emerald-500/20" },
                     { 
                       text: "抖音视频发布 · 排队中", 
-                      icon: ({ className }: { className?: string }) => (
-                        <svg className={`${className} animate-spin`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="12" cy="3" r="2" fill="currentColor" opacity="1" />
-                          <circle cx="12" cy="21" r="2" fill="currentColor" opacity="0.3" />
-                          <circle cx="3" cy="12" r="2" fill="currentColor" opacity="0.3" />
-                          <circle cx="21" cy="12" r="2" fill="currentColor" opacity="0.6" />
-                          <circle cx="5.6" cy="5.6" r="2" fill="currentColor" opacity="0.3" />
-                          <circle cx="18.4" cy="18.4" r="2" fill="currentColor" opacity="0.4" />
-                          <circle cx="5.6" cy="18.4" r="2" fill="currentColor" opacity="0.3" />
-                          <circle cx="18.4" cy="5.6" r="2" fill="currentColor" opacity="0.8" />
-                        </svg>
-                      ), 
+                      icon: faCircleNotch, 
+                      spin: true,
                       color: "text-blue-400", 
                       bg: "bg-blue-400/20" 
                     },
-                    { text: "公域获客扫描 · 执行中", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/20" },
-                    { text: "AI员工 · 每日任务执行", icon: Bot, color: "text-blue-500", bg: "bg-blue-500/20" },
-                    { text: "朋友圈营销 · 已完成", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/20" },
+                    { text: "公域获客扫描 · 执行中", icon: faCircleCheck, color: "text-[#10b981]", bg: "bg-emerald-500/20" },
+                    { text: "AI员工 · 每日任务执行", icon: faRobot, color: "text-blue-500", bg: "bg-blue-500/20" },
+                    { text: "朋友圈营销 · 已完成", icon: faCircleCheck, color: "text-[#10b981]", bg: "bg-emerald-500/20" },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-3 text-slate-300">
                         <div className={`flex h-5 w-5 items-center justify-center rounded-full ${item.bg} ${item.color}`}>
-                          <item.icon className="h-3.5 w-3.5" />
+                          <FontAwesomeIcon icon={item.icon} spin={item.spin} className="text-[12px]" />
                         </div>
                         {item.text}
                       </div>
@@ -128,7 +129,7 @@ export function Hero() {
             {/* Background Blob */}
             <div className="absolute -right-20 -bottom-20 -z-20 h-80 w-80 rounded-full bg-[#2563eb]/20 blur-[100px]" />
             <div className="absolute -left-20 -top-20 -z-20 h-80 w-80 rounded-full bg-blue-50 blur-[100px]" />
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>
