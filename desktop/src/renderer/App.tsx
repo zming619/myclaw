@@ -1,4 +1,25 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import {
+  ActivityIcon,
+  BotIcon,
+  CommandIcon,
+  CopyIcon,
+  CpuIcon,
+  FolderKanbanIcon,
+  InboxIcon,
+  LayoutDashboardIcon,
+  MoonStarIcon,
+  PanelLeftIcon,
+  RefreshCcwIcon,
+  SearchIcon,
+  SendIcon,
+  Settings2Icon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  SunMediumIcon,
+  WorkflowIcon,
+} from 'lucide-react'
 import type {
   AppSnapshot,
   BindDeviceInput,
@@ -9,11 +30,63 @@ import type {
 } from '../shared/contracts'
 import { buildAssistantReply, type AssistantReply } from './lib/assistant'
 import { knowledgeBase } from './data/knowledgeBase'
+import { cn } from '@/lib/utils'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 
 type TabKey = 'overview' | 'command' | 'ai' | 'device'
 type TaskFilterKey = 'all' | 'active' | 'wechat' | 'completed' | 'stopped' | 'failed'
 type TaskSortKey = 'updated_desc' | 'created_desc' | 'name_asc' | 'status_priority'
 type ThemeMode = 'light' | 'dark'
+type AccentTone = 'blue' | 'cyan' | 'green' | 'violet' | 'amber' | 'rose'
 
 interface ChatMessage {
   id: string
@@ -35,17 +108,41 @@ interface AutoReplyTaskFormState {
   dryRun: boolean
 }
 
-const tabs: Array<{ key: TabKey; label: string; description: string }> = [
-  { key: 'overview', label: '执行总览', description: '设备、队列和运营模块状态' },
-  { key: 'command', label: '指令中心', description: '模板下发、远程收件箱和执行进度' },
-  { key: 'ai', label: 'AI / RAG', description: '知识命中、策略建议和任务生成' },
-  { key: 'device', label: '设备管理', description: '绑定信息、开关项和活动日志' },
+interface TabDefinition {
+  key: TabKey
+  label: string
+  description: string
+  icon: LucideIcon
+}
+
+const tabs: TabDefinition[] = [
+  {
+    key: 'overview',
+    label: '执行总览',
+    description: '看清设备在线、工作流进度和当前任务压力。',
+    icon: LayoutDashboardIcon,
+  },
+  {
+    key: 'command',
+    label: '指令中心',
+    description: '下发模板、处理收件箱，并创建微信守护任务。',
+    icon: CommandIcon,
+  },
+  {
+    key: 'ai',
+    label: 'AI / RAG',
+    description: '让 AI 根据本地知识和设备状态生成执行建议。',
+    icon: BotIcon,
+  },
+  {
+    key: 'device',
+    label: '设备管理',
+    description: '维护绑定信息、系统开关和执行环境巡检。',
+    icon: Settings2Icon,
+  },
 ]
 
-const tabGroups: Array<{
-  title: string
-  tabs: Array<{ key: TabKey; label: string; description: string }>
-}> = [
+const tabGroups: Array<{ title: string; tabs: TabDefinition[] }> = [
   {
     title: '控制台',
     tabs: tabs.filter((tab) => tab.key === 'overview' || tab.key === 'command'),
@@ -58,6 +155,15 @@ const tabGroups: Array<{
     title: '系统',
     tabs: tabs.filter((tab) => tab.key === 'device'),
   },
+]
+
+const taskFilters: Array<{ key: TaskFilterKey; label: string }> = [
+  { key: 'all', label: '全部' },
+  { key: 'active', label: '运行中' },
+  { key: 'wechat', label: '微信' },
+  { key: 'completed', label: '已完成' },
+  { key: 'stopped', label: '已停止' },
+  { key: 'failed', label: '失败' },
 ]
 
 const themeStorageKey = 'myclaw-desktop-theme'
@@ -107,13 +213,13 @@ function getTemplateHint(template?: CommandTemplate, runnerHealth?: PythonRunner
     const hint = []
 
     if (template.id === 'auto_reply') {
-      hint.push('自动回复守护当前默认走 computer use：先截图识别当前聊天，如果不是目标好友 / 群，再搜索切回目标，然后按截图里识别出的历史聊天和最后一条待回复消息生成回复。')
+      hint.push('自动回复守护默认走 computer use：先识别当前微信会话，再回到目标聊天，并基于历史上下文生成回复。')
     } else if (template.id === 'moments_campaign') {
-      hint.push('朋友圈营销当前为 hybrid 辅助执行：会切到朋友圈、准备剪贴板和草稿，但仍需要你最终确认发布。')
+      hint.push('朋友圈营销当前是 hybrid 辅助执行：会准备草稿和剪贴板，但仍建议人工确认发布。')
     } else if (template.id === 'tag_management') {
-      hint.push('标签管理当前会写入本地标签台账，并尝试逐个定位联系人供确认，还不是 WeChat 内原生标签的全自动点击流。')
+      hint.push('标签管理会先更新本地台账，再辅助定位联系人，暂时不是微信原生标签的全自动流。')
     } else {
-      hint.push('mac 微信当前按 contacts / groups / recipients / messages 执行。首次建议保留 dryRun: true，并先在系统设置中给 Terminal 或桌面客户端开启辅助功能和自动化权限。')
+      hint.push('微信任务首次建议保留 dryRun: true，并先确认 Terminal 或桌面客户端已有辅助功能和自动化权限。')
     }
 
     if (runnerHealth?.wechat) {
@@ -209,24 +315,34 @@ function createAutoReplyTaskForm(payload?: Record<string, unknown>): AutoReplyTa
 function getTaskBadge(task: QueueTask) {
   if (task.backgroundActive) {
     return {
-      tone: 'badge-running',
       label: '守护中',
+      variant: 'default' as const,
     }
   }
 
   if (task.status === 'queued') {
-    return { tone: 'badge-queued', label: '排队中' }
+    return { label: '排队中', variant: 'outline' as const }
   }
   if (task.status === 'running') {
-    return { tone: 'badge-running', label: '执行中' }
+    return { label: '执行中', variant: 'default' as const }
   }
   if (task.status === 'completed') {
-    return { tone: 'badge-completed', label: '已完成' }
+    return { label: '已完成', variant: 'secondary' as const }
   }
   if (task.status === 'stopped') {
-    return { tone: 'badge-stopped', label: '已停止' }
+    return { label: '已停止', variant: 'outline' as const }
   }
-  return { tone: 'badge-failed', label: '失败' }
+  return { label: '失败', variant: 'destructive' as const }
+}
+
+function getInboxBadge(status: AppSnapshot['inbox'][number]['status']) {
+  if (status === 'pending') {
+    return { label: '待拉取', variant: 'outline' as const }
+  }
+  if (status === 'ingested') {
+    return { label: '已入队', variant: 'secondary' as const }
+  }
+  return { label: '已拒绝', variant: 'destructive' as const }
 }
 
 function canStopTask(task: QueueTask) {
@@ -275,6 +391,86 @@ function getInitialThemeMode(): ThemeMode {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+function getTintClass(tone: AccentTone) {
+  const mapping: Record<AccentTone, string> = {
+    blue: 'app-tint-blue',
+    cyan: 'app-tint-cyan',
+    green: 'app-tint-green',
+    violet: 'app-tint-violet',
+    amber: 'app-tint-amber',
+    rose: 'app-tint-rose',
+  }
+
+  return mapping[tone]
+}
+
+function getModuleTone(accent: string): AccentTone {
+  if (accent === 'emerald') {
+    return 'green'
+  }
+  if (accent === 'amber') {
+    return 'amber'
+  }
+  if (accent === 'violet') {
+    return 'violet'
+  }
+  return 'blue'
+}
+
+function getWorkflowTone(status: AppSnapshot['workflow'][number]['status']): AccentTone {
+  if (status === 'done') {
+    return 'green'
+  }
+  if (status === 'running') {
+    return 'blue'
+  }
+  return 'violet'
+}
+
+function getTaskTone(task: QueueTask): AccentTone {
+  if (task.status === 'failed') {
+    return 'rose'
+  }
+  if (task.status === 'completed') {
+    return 'green'
+  }
+  if (task.status === 'stopped') {
+    return 'amber'
+  }
+  if (task.backgroundActive) {
+    return 'violet'
+  }
+  return 'blue'
+}
+
+function getWechatGuardBlockedMessage(runnerHealth?: PythonRunnerHealth | null) {
+  if (!runnerHealth) {
+    return '微信执行环境还没完成巡检，请先点击“重新巡检”，确认微信自动化环境可用。'
+  }
+
+  if (runnerHealth.wechat?.available === false) {
+    return `微信自动回复暂时无法启动：${runnerHealth.wechat.detail}`
+  }
+
+  if (!runnerHealth.ok) {
+    return `Python RPA 当前不可用：${runnerHealth.detail}`
+  }
+
+  return null
+}
+
+function getAutoReplyLaunchSummary(form: AutoReplyTaskFormState) {
+  if (!form.enabled) {
+    return '当前只会保存守护配置，不会启动后台自动回复。'
+  }
+
+  if (form.dryRun) {
+    return '当前是 dryRun 演练模式，会打开微信并检查流程，但不会实际自动回复。'
+  }
+
+  return '当前会真实启动后台守护，命中新消息后会自动回复。'
+}
+
 export default function App() {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
@@ -299,6 +495,8 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [taskQuery, setTaskQuery] = useState('')
   const [taskSort, setTaskSort] = useState<TaskSortKey>('updated_desc')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const surfacedFailedTaskIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -310,7 +508,9 @@ export default function App() {
 
       setSnapshot(nextSnapshot)
       setSelectedTemplateId((current) => current || nextSnapshot.templates[0]?.id || 'broadcast_message')
-      setPayloadText((current) => (current === '{}' ? getTemplatePayload(nextSnapshot, 'broadcast_message') : current))
+      setPayloadText((current) =>
+        current === '{}' ? getTemplatePayload(nextSnapshot, 'broadcast_message') : current,
+      )
       setDeviceForm({
         alias: nextSnapshot.device.alias,
         workspace: nextSnapshot.device.workspace,
@@ -333,7 +533,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    document.documentElement.dataset.theme = themeMode
+    const root = document.documentElement
+    root.classList.toggle('dark', themeMode === 'dark')
+    root.style.colorScheme = themeMode
     window.localStorage.setItem(themeStorageKey, themeMode)
   }, [themeMode])
 
@@ -348,6 +550,23 @@ export default function App() {
 
     setSelectedTaskId(snapshot.queue[0]?.id || null)
   }, [snapshot, selectedTaskId])
+
+  useEffect(() => {
+    if (!snapshot) {
+      return
+    }
+
+    const failedTask = [...snapshot.queue]
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+      .find((task) => task.status === 'failed' && !surfacedFailedTaskIdsRef.current.has(task.id))
+
+    if (!failedTask) {
+      return
+    }
+
+    surfacedFailedTaskIdsRef.current.add(failedTask.id)
+    setNotice(`${failedTask.name} 执行失败：${failedTask.result || '请展开任务详情查看日志。'}`)
+  }, [snapshot])
 
   async function applySnapshot(promise: Promise<AppSnapshot | undefined>, successText: string) {
     const nextSnapshot = await promise
@@ -391,7 +610,10 @@ export default function App() {
   }
 
   async function handleToggleSetting(key: 'autoPolling' | 'autoReply', value: boolean) {
-    await applySnapshot(window.desktop.toggleSetting(key, value), `已更新 ${key === 'autoPolling' ? '自动轮询' : '自动回复'} 开关。`)
+    await applySnapshot(
+      window.desktop.toggleSetting(key, value),
+      `已更新 ${key === 'autoPolling' ? '自动轮询' : '自动回复'} 开关。`,
+    )
   }
 
   async function handleStopTask(taskId: string) {
@@ -419,9 +641,21 @@ export default function App() {
 
   async function handleAutoReplyTaskSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!snapshot) {
+      return
+    }
+
+    const blockedMessage = getWechatGuardBlockedMessage(snapshot.runnerHealth)
+    if (blockedMessage) {
+      setNotice(blockedMessage)
+      return
+    }
 
     try {
-      const keywordReplies = JSON.parse(autoReplyTaskForm.keywordRepliesText || '{}') as Record<string, string>
+      const keywordReplies = JSON.parse(autoReplyTaskForm.keywordRepliesText || '{}') as Record<
+        string,
+        string
+      >
       await applySnapshot(
         window.desktop.enqueueTask({
           templateId: 'auto_reply',
@@ -442,7 +676,11 @@ export default function App() {
             dryRun: autoReplyTaskForm.dryRun,
           },
         }),
-        '微信自动回复守护任务已创建。',
+        autoReplyTaskForm.enabled
+          ? autoReplyTaskForm.dryRun
+            ? '微信自动回复守护任务已创建，当前为 dryRun 演练模式。'
+            : '微信自动回复守护任务已创建，已准备进入后台自动回复。'
+          : '微信自动回复配置已保存，当前未启动后台守护。',
       )
     } catch {
       setNotice('关键词回复 JSON 不合法，请检查后再创建守护任务。')
@@ -495,12 +733,20 @@ export default function App() {
   }
 
   if (!snapshot) {
-    return <div className="loading-shell">MyClaw Desktop 初始化中...</div>
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>MyClaw Desktop 初始化中</CardTitle>
+            <CardDescription>正在加载本地设备状态、任务队列和 AI 助手上下文。</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
   }
 
-  const runningTasks = snapshot.queue.filter(
-    (task) => task.status === 'queued' || task.status === 'running',
-  )
+  const currentTab = tabs.find((tab) => tab.key === activeTab) || tabs[0]
+  const runningTasks = snapshot.queue.filter((task) => task.status === 'queued' || task.status === 'running')
   const filteredTasks = sortTasks(
     snapshot.queue.filter((task) => {
       if (!taskMatchesFilter(task, taskFilter)) {
@@ -512,21 +758,14 @@ export default function App() {
         return true
       }
 
-      return [
-        task.name,
-        task.sopCode,
-        task.templateId,
-        task.platforms.join(' '),
-        task.result || '',
-      ]
+      return [task.name, task.sopCode, task.templateId, task.platforms.join(' '), task.result || '']
         .join(' ')
         .toLowerCase()
         .includes(normalizedQuery)
     }),
     taskSort,
   )
-  const selectedTask =
-    filteredTasks.find((task) => task.id === selectedTaskId) || filteredTasks[0] || null
+  const selectedTask = filteredTasks.find((task) => task.id === selectedTaskId) || filteredTasks[0] || null
   const selectedTemplate = findTemplate(snapshot, selectedTemplateId)
   const activeAutoReplyTask = snapshot.activeAutoReplyTaskId
     ? snapshot.queue.find((task) => task.id === snapshot.activeAutoReplyTaskId) || null
@@ -534,991 +773,1386 @@ export default function App() {
   const latestAssistant = [...messages]
     .reverse()
     .find((message) => message.role === 'assistant' && message.suggestion)
-  const currentTab = tabs.find((tab) => tab.key === activeTab) || tabs[0]
-  const workspaceHighlights = [
+  const surfaceStats = [
     {
       label: '当前设备',
       value: snapshot.device.alias,
-      detail: snapshot.device.online ? '在线并持续回传心跳' : '当前离线，等待恢复连接',
+      detail: `${snapshot.device.workspace} · ${snapshot.device.online ? '在线' : '离线'}`,
+      icon: ActivityIcon,
+      tone: 'blue' as AccentTone,
     },
     {
       label: '运行队列',
-      value: `${queueCount(snapshot.queue)} 条`,
-      detail: `${getTaskFilterCount(snapshot.queue, 'active')} 条任务处于运行或守护中`,
+      value: `${getTaskFilterCount(snapshot.queue, 'active')} 条`,
+      detail: `${snapshot.queue.length} 条任务已进入桌面队列`,
+      icon: FolderKanbanIcon,
+      tone: 'green' as AccentTone,
     },
     {
       label: '执行环境',
       value: describeRunnerMode(snapshot.runnerHealth?.mode),
-      detail: snapshot.runnerHealth?.detail || 'Python RPA 巡检结果待返回',
+      detail: snapshot.runnerHealth?.detail || '尚未返回 Python RPA 巡检结果',
+      icon: CpuIcon,
+      tone: 'violet' as AccentTone,
+    },
+    {
+      label: '最近心跳',
+      value: formatDateTime(snapshot.device.heartbeatAt),
+      detail: `CPU ${snapshot.device.cpuLoad}% · 内存 ${snapshot.device.memoryUsage}%`,
+      icon: ShieldCheckIcon,
+      tone: 'cyan' as AccentTone,
     },
   ]
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="brand-card">
-          <div className="brand-badge">MYCLAW DESKTOP</div>
-          <div className="brand-lockup">
-            <MyClawMark />
-            <div className="brand-copy">
-              <h1>MyClaw Desktop</h1>
-              <p>一个桌面控制台，承接远程指令、RPA 执行和 AI 策略建议。</p>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen">
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <div className="flex h-screen overflow-hidden">
+          <aside className="hidden h-screen w-80 shrink-0 border-r bg-sidebar/80 backdrop-blur xl:flex">
+            <WorkspaceNavigation
+              activeTab={activeTab}
+              onSelect={(tabKey) => setActiveTab(tabKey)}
+              snapshot={snapshot}
+            />
+          </aside>
 
-        <div className="device-summary">
-          <div className="device-pill">
-            <span className="status-dot status-live"></span>
-            {snapshot.device.alias}
-          </div>
-          <strong>{snapshot.device.workspace}</strong>
-          <div className="device-summary-meta">
-            <span>绑定码 {snapshot.device.bindCode}</span>
-            <span>CPU {snapshot.device.cpuLoad}% · 内存 {snapshot.device.memoryUsage}%</span>
-            <span>AI 员工 {snapshot.device.operatorName}</span>
-          </div>
-        </div>
-
-        <nav className="nav-list" aria-label="功能导航">
-          {tabGroups.map((group) => (
-            <section key={group.title} className="nav-group">
-              <div className="nav-group-title">{group.title}</div>
-              <div className="nav-group-list">
-                {group.tabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    className={tab.key === activeTab ? 'nav-item nav-item-active' : 'nav-item'}
-                    onClick={() => setActiveTab(tab.key)}
-                  >
-                    <strong>{tab.label}</strong>
-                    <span>{tab.description}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div>
-            <span>在线状态</span>
-            <strong>{snapshot.device.online ? '运行中' : '离线'}</strong>
-          </div>
-          <div>
-            <span>队列任务</span>
-            <strong>{queueCount(snapshot.queue)} 条</strong>
-          </div>
-          <div>
-            <span>外观模式</span>
-            <strong>{themeMode === 'dark' ? '暗色' : '亮色'}</strong>
-          </div>
-        </div>
-      </aside>
-
-      <main className="content">
-        <header className="topbar">
-          <div className="topbar-copy-block">
-            <p className="eyebrow">
-              MYCLAW OPERATOR / {themeMode === 'dark' ? 'NIGHT SHIFT' : 'DAY SHIFT'}
-            </p>
-            <h2>{currentTab.label}</h2>
-            <p className="topbar-description">{currentTab.description}</p>
-          </div>
-          <div className="topbar-actions">
-            <div className="theme-switch" role="tablist" aria-label="外观模式">
-              <button
-                type="button"
-                className={themeMode === 'light' ? 'theme-switch-button is-active' : 'theme-switch-button'}
-                onClick={() => setThemeMode('light')}
-              >
-                亮色
-              </button>
-              <button
-                type="button"
-                className={themeMode === 'dark' ? 'theme-switch-button is-active' : 'theme-switch-button'}
-                onClick={() => setThemeMode('dark')}
-              >
-                暗色
-              </button>
-            </div>
-            <div className="notice-card">{notice}</div>
-          </div>
-        </header>
-
-        <section className="workspace-band">
-          <div className="workspace-band-copy">
-            <p className="eyebrow">CONTROL SURFACE</p>
-            <h3>把设备、队列、AI 建议和微信执行器放在同一张桌面上</h3>
-            <p className="hero-copy">
-              这一版界面改成了更偏桌面工作台的层级：左侧固定导航，右侧是当前任务视图，亮色和暗色共用一套语义化配色变量，切换时不会丢状态。
-            </p>
-          </div>
-          <div className="workspace-band-grid">
-            {workspaceHighlights.map((item) => (
-              <article key={item.label} className="workspace-stat">
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                <small>{item.detail}</small>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {activeTab === 'overview' ? (
-          <section className="page-grid">
-            <div className="hero-panel">
-              <div>
-                <p className="eyebrow">REMOTE COMMAND + RPA</p>
-                <h3>手机下指令，桌面端自动轮询并执行</h3>
-                <p className="hero-copy">
-                  这版桌面端已经打通本地任务队列、远程收件箱、设备心跳、AI 建议和知识命中。后续接真实
-                  PHP API、Python RPA、微信自动化时，只需要替换主进程里的数据源。
-                </p>
-              </div>
-              <div className="hero-stats">
-                {snapshot.metrics.map((metric) => (
-                  <article key={metric.label} className={`metric-card tone-${metric.tone}`}>
-                    <span>{metric.label}</span>
-                    <strong>{metric.value}</strong>
-                    <small>{metric.detail}</small>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">CAPABILITIES</p>
-                  <h3>核心执行模块</h3>
-                </div>
-              </div>
-              <div className="module-grid">
-                {snapshot.modules.map((item) => (
-                  <article key={item.id} className={`module-card accent-${item.accent}`}>
-                    <strong>{item.name}</strong>
-                    <p>{item.description}</p>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">WORKFLOW</p>
-                  <h3>AI 员工班次与工作流</h3>
-                </div>
-              </div>
-              <div className="timeline">
-                {snapshot.workflow.map((step) => (
-                  <article key={step.id} className={`timeline-item status-${step.status}`}>
-                    <div className="timeline-time">{step.time}</div>
-                    <div className="timeline-body">
-                      <strong>{step.title}</strong>
-                      <p>{step.detail}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">QUEUE</p>
-                  <h3>当前执行队列</h3>
-                </div>
-              </div>
-              <div className="task-list">
-                {snapshot.queue.slice(0, 4).map((task) => (
-                  <TaskCard key={task.id} task={task} onStop={handleStopTask} />
-                ))}
-              </div>
-            </section>
-          </section>
-        ) : null}
-
-        {activeTab === 'command' ? (
-          <section className="page-grid command-grid">
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">TEMPLATES</p>
-                  <h3>快速下发任务</h3>
-                </div>
-              </div>
-
-              <form className="stack-form" onSubmit={handleTemplateSubmit}>
-                <label>
-                  <span>选择模板</span>
-                  <select
-                    value={selectedTemplateId}
-                    onChange={(event) => handleTemplateChange(event.target.value)}
-                  >
-                    {snapshot.templates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name} · {template.category}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <div className="template-meta">
-                  <strong>{selectedTemplate?.description}</strong>
-                  <span>SOP: {selectedTemplate?.sopCode}</span>
-                  <span>
-                    平台：{selectedTemplate?.platforms.join(' / ')}
-                  </span>
-                  <span>
-                    预计执行 {selectedTemplate?.estimatedSeconds ?? 0} 秒
-                  </span>
-                </div>
-
-                <label>
-                  <span>JSON 载荷</span>
-                  <textarea
-                    rows={9}
-                    value={payloadText}
-                    onChange={(event) => setPayloadText(event.target.value)}
-                  />
-                </label>
-                {getTemplateHint(selectedTemplate, snapshot.runnerHealth) ? (
-                  <p className="form-hint">{getTemplateHint(selectedTemplate, snapshot.runnerHealth)}</p>
-                ) : null}
-
-                <button type="submit" className="primary-button">
-                  加入桌面队列
-                </button>
-              </form>
-            </section>
-
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">REMOTE INBOX</p>
-                  <h3>模拟手机端下发指令</h3>
-                </div>
-              </div>
-
-              <form className="stack-form" onSubmit={handleRemoteSubmit}>
-                <label>
-                  <span>文字或 JSON 指令</span>
-                  <textarea
-                    rows={7}
-                    value={remoteCommand}
-                    onChange={(event) => setRemoteCommand(event.target.value)}
-                  />
-                </label>
-
-                <div className="toggle-row">
-                  <span>自动轮询</span>
-                  <button
-                    type="button"
-                    className={snapshot.device.autoPolling ? 'toggle is-on' : 'toggle'}
-                    onClick={() => handleToggleSetting('autoPolling', !snapshot.device.autoPolling)}
-                  >
-                    {snapshot.device.autoPolling ? '开启' : '关闭'}
-                  </button>
-                </div>
-
-                <button type="submit" className="primary-button primary-button-secondary">
-                  投递到远程收件箱
-                </button>
-              </form>
-
-              <div className="inbox-list">
-                {snapshot.inbox.slice(0, 6).map((item) => (
-                  <article key={item.id} className={`inbox-card inbox-${item.status}`}>
-                    <div className="inbox-head">
-                      <strong>{item.status === 'pending' ? '待拉取' : item.status === 'ingested' ? '已入队' : '已拒绝'}</strong>
-                      <span>{formatDateTime(item.createdAt)}</span>
-                    </div>
-                    <p>{item.raw}</p>
-                    <small>{item.detail}</small>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">WECHAT GUARD</p>
-                  <h3>微信自动回复守护</h3>
-                </div>
-                {activeAutoReplyTask ? (
-                  <button
-                    type="button"
-                    className="ghost-button ghost-button-danger"
-                    onClick={() => handleStopTask(activeAutoReplyTask.id)}
-                  >
-                    停止守护
-                  </button>
-                ) : null}
-              </div>
-
-              <form className="stack-form" onSubmit={handleAutoReplyTaskSubmit}>
-                <div className="field-grid">
-                  <label>
-                    <span>守护对象</span>
-                    <input
-                      value={autoReplyTaskForm.targetName}
-                      onChange={(event) =>
-                        setAutoReplyTaskForm((current) => ({
-                          ...current,
-                          targetName: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    <span>对象类型</span>
-                    <select
-                      value={autoReplyTaskForm.targetKind}
-                      onChange={(event) =>
-                        setAutoReplyTaskForm((current) => ({
-                          ...current,
-                          targetKind: event.target.value as 'contact' | 'group',
-                        }))
-                      }
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as TabKey)}
+            className="flex min-h-0 flex-1 flex-col gap-0"
+          >
+            <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur-xl">
+              <div className="flex flex-col gap-4 px-4 py-4 md:px-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className="xl:hidden"
+                      onClick={() => setMobileNavOpen(true)}
                     >
-                      <option value="contact">好友</option>
-                      <option value="group">群聊</option>
-                    </select>
-                  </label>
-                </div>
-
-                <label>
-                  <span>欢迎语</span>
-                  <textarea
-                    rows={3}
-                    value={autoReplyTaskForm.welcome}
-                    onChange={(event) =>
-                      setAutoReplyTaskForm((current) => ({
-                        ...current,
-                        welcome: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-
-                <label>
-                  <span>兜底回复</span>
-                  <textarea
-                    rows={3}
-                    value={autoReplyTaskForm.fallbackReply}
-                    onChange={(event) =>
-                      setAutoReplyTaskForm((current) => ({
-                        ...current,
-                        fallbackReply: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-
-                <label>
-                  <span>关键词回复 JSON</span>
-                  <textarea
-                    rows={6}
-                    value={autoReplyTaskForm.keywordRepliesText}
-                    onChange={(event) =>
-                      setAutoReplyTaskForm((current) => ({
-                        ...current,
-                        keywordRepliesText: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-
-                <div className="field-grid">
-                  <label>
-                    <span>轮询间隔（秒）</span>
-                    <input
-                      value={autoReplyTaskForm.pollIntervalSeconds}
-                      onChange={(event) =>
-                        setAutoReplyTaskForm((current) => ({
-                          ...current,
-                          pollIntervalSeconds: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    <span>去重窗口（秒）</span>
-                    <input
-                      value={autoReplyTaskForm.duplicateCooldownSeconds}
-                      onChange={(event) =>
-                        setAutoReplyTaskForm((current) => ({
-                          ...current,
-                          duplicateCooldownSeconds: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                </div>
-
-                <div className="toggle-row">
-                  <span>启用守护</span>
-                  <button
-                    type="button"
-                    className={autoReplyTaskForm.enabled ? 'toggle is-on' : 'toggle'}
-                    onClick={() =>
-                      setAutoReplyTaskForm((current) => ({
-                        ...current,
-                        enabled: !current.enabled,
-                      }))
-                    }
-                  >
-                    {autoReplyTaskForm.enabled ? '开启' : '关闭'}
-                  </button>
-                </div>
-
-                <div className="toggle-row">
-                  <span>仅演练（dryRun）</span>
-                  <button
-                    type="button"
-                    className={autoReplyTaskForm.dryRun ? 'toggle' : 'toggle is-on'}
-                    onClick={() =>
-                      setAutoReplyTaskForm((current) => ({
-                        ...current,
-                        dryRun: !current.dryRun,
-                      }))
-                    }
-                  >
-                    {autoReplyTaskForm.dryRun ? '演练' : '真实执行'}
-                  </button>
-                </div>
-
-                <p className="form-hint">
-                  这条守护任务会先截图当前微信聊天界面，识别当前是否就是目标会话；如果不是，再搜索切回目标，再基于截图里识别出的历史聊天和最后一条待回复消息生成回复。
-                </p>
-
-                {activeAutoReplyTask ? (
-                  <div className="template-meta">
-                    <strong>当前守护中：{String(activeAutoReplyTask.payload.targetName || '未命名目标')}</strong>
-                    <span>
-                      模式：{activeAutoReplyTask.payload.dryRun ? 'dryRun 演练' : '真实执行'}
-                    </span>
-                    <span>{activeAutoReplyTask.result || '后台守护运行中'}</span>
+                      <PanelLeftIcon />
+                    </Button>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
+                        MyClaw Desktop
+                      </p>
+                      <h1 className="truncate text-2xl font-semibold tracking-tight md:text-3xl">
+                        {currentTab.label}
+                      </h1>
+                      <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
+                        {currentTab.description}
+                      </p>
+                    </div>
                   </div>
-                ) : null}
 
-                <button type="submit" className="primary-button">
-                  创建守护任务
-                </button>
-              </form>
-            </section>
-
-            <section className="panel panel-span-2">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">TASK CENTER</p>
-                  <h3>任务中心</h3>
-                </div>
-                <button type="button" className="ghost-button" onClick={handleClearHistory}>
-                  整理历史
-                </button>
-              </div>
-
-              <div className="task-summary-grid">
-                <article className="task-summary-card">
-                  <span>全部任务</span>
-                  <strong>{snapshot.queue.length}</strong>
-                  <small>已入列的桌面任务总数</small>
-                </article>
-                <article className="task-summary-card">
-                  <span>运行中</span>
-                  <strong>{getTaskFilterCount(snapshot.queue, 'active')}</strong>
-                  <small>排队、执行和后台守护</small>
-                </article>
-                <article className="task-summary-card">
-                  <span>微信任务</span>
-                  <strong>{getTaskFilterCount(snapshot.queue, 'wechat')}</strong>
-                  <small>含群发、守护、SOP 等</small>
-                </article>
-                <article className="task-summary-card">
-                  <span>异常 / 已停</span>
-                  <strong>
-                    {getTaskFilterCount(snapshot.queue, 'failed') + getTaskFilterCount(snapshot.queue, 'stopped')}
-                  </strong>
-                  <small>需要人工关注的任务</small>
-                </article>
-              </div>
-
-              <div className="task-filter-row" role="tablist" aria-label="任务筛选">
-                {([
-                  ['all', '全部'],
-                  ['active', '运行中'],
-                  ['wechat', '微信'],
-                  ['completed', '已完成'],
-                  ['stopped', '已停止'],
-                  ['failed', '失败'],
-                ] as Array<[TaskFilterKey, string]>).map(([filterKey, label]) => (
-                  <button
-                    key={filterKey}
-                    type="button"
-                    className={taskFilter === filterKey ? 'task-filter-chip is-active' : 'task-filter-chip'}
-                    onClick={() => {
-                      setTaskFilter(filterKey)
-                      const nextSelected = snapshot.queue.find((task) =>
-                        taskMatchesFilter(task, filterKey),
-                      )
-                      setSelectedTaskId(nextSelected?.id || null)
-                    }}
-                  >
-                    <span>{label}</span>
-                    <strong>{getTaskFilterCount(snapshot.queue, filterKey)}</strong>
-                  </button>
-                ))}
-              </div>
-
-              <div className="task-toolbar">
-                <label className="task-toolbar-field">
-                  <span>搜索任务</span>
-                  <input
-                    value={taskQuery}
-                    onChange={(event) => setTaskQuery(event.target.value)}
-                    placeholder="按任务名、SOP、平台或结果搜索"
-                  />
-                </label>
-                <label className="task-toolbar-field task-toolbar-field-compact">
-                  <span>排序方式</span>
-                  <select
-                    value={taskSort}
-                    onChange={(event) => setTaskSort(event.target.value as TaskSortKey)}
-                  >
-                    <option value="updated_desc">最近更新</option>
-                    <option value="created_desc">最近创建</option>
-                    <option value="status_priority">按状态优先级</option>
-                    <option value="name_asc">按名称</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="task-center">
-                <div className="task-center-list">
-                  {filteredTasks.length ? (
-                    filteredTasks.map((task) => (
-                      <button
-                        key={task.id}
-                        type="button"
-                        className={
-                          selectedTask?.id === task.id
-                            ? 'task-list-item is-selected'
-                            : 'task-list-item'
-                        }
-                        onClick={() => setSelectedTaskId(task.id)}
-                      >
-                        <div className="task-list-item-head">
-                          <strong>{task.name}</strong>
-                          <span className={`task-badge ${getTaskBadge(task).tone}`}>
-                            {getTaskBadge(task).label}
-                          </span>
-                        </div>
-                        <span>{task.platforms.join(' / ')}</span>
-                        <span>{task.sopCode}</span>
-                        <div className="task-list-item-meta">
-                          <span>{formatDateTime(task.createdAt)}</span>
-                          <span>{task.source.toUpperCase()}</span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="empty-card">
-                      <strong>这个筛选下还没有任务</strong>
-                      <p>你可以先在左侧创建微信任务，或者切换筛选查看别的任务状态。</p>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <div className="hidden items-center gap-3 rounded-full border bg-card/70 px-3 py-2 md:flex">
+                      <SunMediumIcon className="size-4 text-muted-foreground" />
+                      <Switch
+                        checked={themeMode === 'dark'}
+                        onCheckedChange={(checked) => setThemeMode(checked ? 'dark' : 'light')}
+                        aria-label="切换深色模式"
+                      />
+                      <MoonStarIcon className="size-4 text-muted-foreground" />
                     </div>
-                  )}
+                    <Badge variant="outline">{snapshot.device.bindCode}</Badge>
+                  </div>
                 </div>
 
-                <div className="task-detail-shell">
-                  {selectedTask ? (
-                    <TaskDetailPanel
-                      task={selectedTask}
-                      onStop={handleStopTask}
-                      onRetry={handleRetryTask}
-                      onCopyPayload={(task) =>
-                        handleCopyText(formatJson(task.payload), '任务载荷已复制到剪贴板。')
-                      }
-                      onCopyLogs={(task) =>
-                        handleCopyText(task.logs.join('\n'), '任务日志已复制到剪贴板。')
-                      }
-                    />
-                  ) : (
-                    <div className="empty-card task-detail-empty">
-                      <strong>还没有选中任务</strong>
-                      <p>从左侧任务列表选一条，就能查看 payload、日志、结果和停止操作。</p>
+                <Alert className="app-tint-blue app-status-glow">
+                  <SparklesIcon />
+                  <AlertTitle>{notice}</AlertTitle>
+                  <AlertDescription>
+                    当前绑定设备 {snapshot.device.alias}，AI 员工昵称为 {snapshot.device.operatorName}。
+                  </AlertDescription>
+                </Alert>
+
+                <TabsList variant="line" className="w-full justify-start overflow-x-auto">
+                  {tabs.map((tab) => (
+                    <TabsTrigger key={tab.key} value={tab.key} className="flex-none">
+                      <tab.icon />
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            </header>
+
+            <main className="min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <div className="flex flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
+                  <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+                    <Card className="app-shell-card app-hero-panel overflow-hidden">
+                      <CardHeader>
+                        <CardTitle>控制面焦点</CardTitle>
+                        <CardDescription>
+                          一张桌面里同时承接设备状态、任务流转、AI 建议和微信执行器。
+                        </CardDescription>
+                        <CardAction>
+                          <Badge variant="secondary">{themeMode === 'dark' ? 'Dark' : 'Light'}</Badge>
+                        </CardAction>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-4">
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <div className="app-hero-chip app-tint-blue rounded-xl border p-4">
+                            <p className="text-sm text-muted-foreground">当前视图</p>
+                            <p className="mt-2 text-lg font-semibold">{currentTab.label}</p>
+                          </div>
+                          <div className="app-hero-chip app-tint-green rounded-xl border p-4">
+                            <p className="text-sm text-muted-foreground">自动轮询</p>
+                            <p className="mt-2 text-lg font-semibold">
+                              {snapshot.device.autoPolling ? '开启' : '关闭'}
+                            </p>
+                          </div>
+                          <div className="app-hero-chip app-tint-violet rounded-xl border p-4">
+                            <p className="text-sm text-muted-foreground">自动回复</p>
+                            <p className="mt-2 text-lg font-semibold">
+                              {snapshot.device.autoReply ? '开启' : '关闭'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">队列负载</span>
+                            <span className="font-medium">{runningTasks.length} / {snapshot.queue.length || 1}</span>
+                          </div>
+                          <Progress
+                            value={snapshot.queue.length ? (runningTasks.length / snapshot.queue.length) * 100 : 0}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {surfaceStats.map((item) => (
+                        <Card key={item.label} size="sm" className={cn('app-shell-card', getTintClass(item.tone))}>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-sm">
+                              <item.icon className="size-4 text-muted-foreground" />
+                              {item.label}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="flex flex-col gap-1">
+                            <div className="text-xl font-semibold tracking-tight">{item.value}</div>
+                            <p className="text-sm text-muted-foreground">{item.detail}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
-                  )}
-                </div>
-              </div>
-            </section>
-          </section>
-        ) : null}
+                  </section>
 
-        {activeTab === 'ai' ? (
-          <section className="page-grid ai-grid">
-            <section className="panel chat-panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">AI COPILOT</p>
-                  <h3>让 AI 帮你生成执行建议</h3>
-                </div>
-              </div>
+                  <TabsContent value="overview" className="mt-0 flex flex-col gap-4">
+                    <div className="grid gap-4 xl:grid-cols-12">
+                      <Card className="app-shell-card xl:col-span-7">
+                        <CardHeader>
+                          <CardTitle>核心执行模块</CardTitle>
+                          <CardDescription>按能力分层整理，便于你看清当前桌面端已经打通哪些链路。</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 md:grid-cols-2">
+                          {snapshot.modules.map((module) => (
+                            <Card
+                              key={module.id}
+                              size="sm"
+                              className={cn('app-shell-card', getTintClass(getModuleTone(module.accent)))}
+                            >
+                              <CardHeader>
+                                <CardTitle className="text-sm">{module.name}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-sm text-muted-foreground">{module.description}</p>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </CardContent>
+                      </Card>
 
-              <div className="chat-list">
-                {messages.map((message) => (
-                  <article
-                    key={message.id}
-                    className={message.role === 'assistant' ? 'chat-bubble assistant' : 'chat-bubble user'}
-                  >
-                    <strong>{message.role === 'assistant' ? 'AI 助手' : '你'}</strong>
-                    <p>{message.content}</p>
-                    {message.citations?.length ? (
-                      <div className="citation-list">
-                        {message.citations.map((citation) => (
-                          <span key={citation}>{citation}</span>
-                        ))}
+                      <Card className="app-shell-card xl:col-span-5">
+                        <CardHeader>
+                          <CardTitle>执行器巡检摘要</CardTitle>
+                          <CardDescription>重点关注 Python RPA、微信可用性和当前模式。</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                          <div className="app-tint-cyan rounded-xl border p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">当前模式</span>
+                                <span className="text-lg font-semibold">
+                                  {describeRunnerMode(snapshot.runnerHealth?.mode)}
+                                </span>
+                              </div>
+                              <Badge variant={snapshot.runnerHealth?.ok ? 'secondary' : 'outline'}>
+                                {snapshot.runnerHealth?.ok ? '已就绪' : '待检查'}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {snapshot.runnerHealth?.capabilities.map((capability) => (
+                              <Badge key={capability} variant="outline">
+                                {formatCapabilityLabel(capability)}
+                              </Badge>
+                            ))}
+                          </div>
+                          <Alert
+                            className={cn(
+                              snapshot.runnerHealth?.wechat?.available ? 'app-tint-green' : 'app-tint-rose',
+                            )}
+                            variant={snapshot.runnerHealth?.wechat?.available ? 'default' : 'destructive'}
+                          >
+                            <ShieldCheckIcon />
+                            <AlertTitle>
+                              {snapshot.runnerHealth?.wechat?.available ? '微信执行环境可用' : '微信执行环境待处理'}
+                            </AlertTitle>
+                            <AlertDescription>
+                              {snapshot.runnerHealth?.wechat?.detail || '尚未返回 mac 微信巡检结果。'}
+                            </AlertDescription>
+                          </Alert>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="app-shell-card xl:col-span-7">
+                        <CardHeader>
+                          <CardTitle>AI 员工班次与工作流</CardTitle>
+                          <CardDescription>把当前排班流转整理成时间轴，方便定位下一步动作。</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                          {snapshot.workflow.map((step, index) => (
+                            <div key={step.id} className="flex flex-col gap-4">
+                              <div className="grid gap-3 md:grid-cols-[100px_minmax(0,1fr)]">
+                                <div className="text-sm font-medium text-muted-foreground">{step.time}</div>
+                                <div
+                                  className={cn(
+                                    'flex flex-col gap-2 rounded-xl border p-4',
+                                    getTintClass(getWorkflowTone(step.status)),
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="font-medium">{step.title}</p>
+                                    <Badge variant={step.status === 'running' ? 'default' : 'outline'}>
+                                      {step.status === 'running'
+                                        ? '进行中'
+                                        : step.status === 'done'
+                                          ? '已完成'
+                                          : '待开始'}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{step.detail}</p>
+                                </div>
+                              </div>
+                              {index < snapshot.workflow.length - 1 ? <Separator /> : null}
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+
+                      <Card className="app-shell-card app-tint-violet xl:col-span-5">
+                        <CardHeader>
+                          <CardTitle>当前执行队列</CardTitle>
+                          <CardDescription>优先展示排队、执行和最近更新的任务。</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-3">
+                          {snapshot.queue.slice(0, 4).map((task) => (
+                            <TaskPreviewCard
+                              key={task.id}
+                              task={task}
+                              onStop={handleStopTask}
+                              onSelect={() => {
+                                setActiveTab('command')
+                                setSelectedTaskId(task.id)
+                              }}
+                            />
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="command" className="mt-0 flex flex-col gap-4">
+                    <div className="grid gap-4 xl:grid-cols-12">
+                      <Card className="app-shell-card app-tint-blue xl:col-span-7">
+                        <CardHeader>
+                          <CardTitle>快速下发任务</CardTitle>
+                          <CardDescription>基于模板整理 payload，再直接推到本地任务队列。</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <form className="flex flex-col gap-5" onSubmit={handleTemplateSubmit}>
+                            <FieldGroup>
+                              <Field>
+                                <FieldLabel htmlFor="template-select">选择模板</FieldLabel>
+                                <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
+                                  <SelectTrigger id="template-select" className="w-full">
+                                    <SelectValue placeholder="选择任务模板" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
+                                      {snapshot.templates.map((template) => (
+                                        <SelectItem key={template.id} value={template.id}>
+                                          {template.name} · {template.category}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
+                                <FieldDescription>
+                                  {selectedTemplate?.description || '选择一个模板来快速生成任务载荷。'}
+                                </FieldDescription>
+                              </Field>
+
+                              <div className="grid gap-4 md:grid-cols-3">
+                                <Card size="sm" className="app-shell-card app-tint-violet">
+                                  <CardHeader>
+                                    <CardTitle className="text-sm">SOP</CardTitle>
+                                  </CardHeader>
+                                  <CardContent>{selectedTemplate?.sopCode || '-'}</CardContent>
+                                </Card>
+                                <Card size="sm" className="app-shell-card app-tint-cyan">
+                                  <CardHeader>
+                                    <CardTitle className="text-sm">平台</CardTitle>
+                                  </CardHeader>
+                                  <CardContent>{selectedTemplate?.platforms.join(' / ') || '-'}</CardContent>
+                                </Card>
+                                <Card size="sm" className="app-shell-card app-tint-amber">
+                                  <CardHeader>
+                                    <CardTitle className="text-sm">预计时长</CardTitle>
+                                  </CardHeader>
+                                  <CardContent>{selectedTemplate?.estimatedSeconds ?? 0} 秒</CardContent>
+                                </Card>
+                              </div>
+
+                              <Field>
+                                <FieldLabel htmlFor="payload-textarea">JSON 载荷</FieldLabel>
+                                <Textarea
+                                  id="payload-textarea"
+                                  rows={12}
+                                  value={payloadText}
+                                  onChange={(event) => setPayloadText(event.target.value)}
+                                />
+                                {getTemplateHint(selectedTemplate, snapshot.runnerHealth) ? (
+                                  <FieldDescription>
+                                    {getTemplateHint(selectedTemplate, snapshot.runnerHealth)}
+                                  </FieldDescription>
+                                ) : null}
+                              </Field>
+                            </FieldGroup>
+
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div className="flex flex-wrap gap-2">
+                                {selectedTemplate?.platforms.map((platform) => (
+                                  <Badge key={platform} variant="outline">
+                                    {platform}
+                                  </Badge>
+                                ))}
+                              </div>
+                              <Button type="submit">
+                                <SendIcon data-icon="inline-start" />
+                                加入桌面队列
+                              </Button>
+                            </div>
+                          </form>
+                        </CardContent>
+                      </Card>
+
+                      <div className="flex flex-col gap-4 xl:col-span-5">
+                        <Card className="app-shell-card app-tint-cyan">
+                          <CardHeader>
+                            <CardTitle>远程收件箱</CardTitle>
+                            <CardDescription>模拟手机端发来的原始文字或 JSON 指令。</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <form className="flex flex-col gap-5" onSubmit={handleRemoteSubmit}>
+                              <FieldGroup>
+                                <Field>
+                                  <FieldLabel htmlFor="remote-command">远程指令</FieldLabel>
+                                  <Textarea
+                                    id="remote-command"
+                                    rows={6}
+                                    value={remoteCommand}
+                                    onChange={(event) => setRemoteCommand(event.target.value)}
+                                  />
+                                </Field>
+                                <Field orientation="horizontal">
+                                  <FieldContent>
+                                    <FieldLabel htmlFor="auto-polling">自动轮询</FieldLabel>
+                                    <FieldDescription>定时从远程收件箱拉取并转成桌面任务。</FieldDescription>
+                                  </FieldContent>
+                                  <Switch
+                                    id="auto-polling"
+                                    checked={snapshot.device.autoPolling}
+                                    onCheckedChange={(checked) => handleToggleSetting('autoPolling', checked)}
+                                  />
+                                </Field>
+                              </FieldGroup>
+
+                              <Button type="submit" variant="secondary">
+                                <InboxIcon data-icon="inline-start" />
+                                投递到远程收件箱
+                              </Button>
+                            </form>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="app-shell-card">
+                          <CardHeader>
+                            <CardTitle>最近收件记录</CardTitle>
+                            <CardDescription>看清每条指令是待拉取、已入队还是被拒绝。</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <ScrollArea className="h-72">
+                              <div className="flex flex-col gap-3 pr-4">
+                                {snapshot.inbox.slice(0, 8).map((item) => {
+                                  const badge = getInboxBadge(item.status)
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className={cn(
+                                        'flex flex-col gap-2 rounded-xl border p-4',
+                                        item.status === 'pending'
+                                          ? 'app-tint-blue'
+                                          : item.status === 'ingested'
+                                            ? 'app-tint-green'
+                                            : 'app-tint-rose',
+                                      )}
+                                    >
+                                      <div className="flex items-center justify-between gap-3">
+                                        <Badge variant={badge.variant}>{badge.label}</Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {formatDateTime(item.createdAt)}
+                                        </span>
+                                      </div>
+                                      <p className="line-clamp-3 text-sm">{item.raw}</p>
+                                      <p className="text-sm text-muted-foreground">{item.detail}</p>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </ScrollArea>
+                          </CardContent>
+                        </Card>
                       </div>
-                    ) : null}
-                    {message.suggestion ? (
-                      <button
-                        type="button"
-                        className="primary-button"
-                        onClick={() => handleSuggestion(message.suggestion!.task)}
-                      >
-                        {message.suggestion.label}
-                      </button>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
 
-              <form className="chat-form" onSubmit={handleAskAssistant}>
-                <textarea
-                  rows={4}
-                  value={chatInput}
-                  onChange={(event) => setChatInput(event.target.value)}
-                  placeholder="例如：帮我给高意向客户群发今晚直播提醒，并把自动回复一起开起来。"
-                />
-                <button type="submit" className="primary-button">
-                  生成建议
-                </button>
-              </form>
-            </section>
+                      <Card className="app-shell-card xl:col-span-12">
+                        <CardHeader>
+                          <CardTitle>微信自动回复守护</CardTitle>
+                          <CardDescription>用一张表单配置目标对象、欢迎语、关键词回复和执行模式。</CardDescription>
+                          {activeAutoReplyTask ? (
+                            <CardAction>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleStopTask(activeAutoReplyTask.id)}
+                              >
+                                停止守护
+                              </Button>
+                            </CardAction>
+                          ) : null}
+                        </CardHeader>
+                        <CardContent>
+                          <form className="flex flex-col gap-5" onSubmit={handleAutoReplyTaskSubmit}>
+                            <FieldGroup>
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <Field>
+                                  <FieldLabel htmlFor="target-name">守护对象</FieldLabel>
+                                  <Input
+                                    id="target-name"
+                                    value={autoReplyTaskForm.targetName}
+                                    onChange={(event) =>
+                                      setAutoReplyTaskForm((current) => ({
+                                        ...current,
+                                        targetName: event.target.value,
+                                      }))
+                                    }
+                                  />
+                                </Field>
+                                <Field>
+                                  <FieldLabel htmlFor="target-kind">对象类型</FieldLabel>
+                                  <Select
+                                    value={autoReplyTaskForm.targetKind}
+                                    onValueChange={(value) =>
+                                      setAutoReplyTaskForm((current) => ({
+                                        ...current,
+                                        targetKind: value as 'contact' | 'group',
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger id="target-kind" className="w-full">
+                                      <SelectValue placeholder="选择守护对象类型" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectGroup>
+                                        <SelectItem value="contact">好友</SelectItem>
+                                        <SelectItem value="group">群聊</SelectItem>
+                                      </SelectGroup>
+                                    </SelectContent>
+                                  </Select>
+                                </Field>
+                              </div>
 
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">RAG RETRIEVAL</p>
-                  <h3>本地知识库命中</h3>
-                </div>
-              </div>
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <Field>
+                                  <FieldLabel htmlFor="welcome-message">欢迎语</FieldLabel>
+                                  <Textarea
+                                    id="welcome-message"
+                                    rows={4}
+                                    value={autoReplyTaskForm.welcome}
+                                    onChange={(event) =>
+                                      setAutoReplyTaskForm((current) => ({
+                                        ...current,
+                                        welcome: event.target.value,
+                                      }))
+                                    }
+                                  />
+                                </Field>
+                                <Field>
+                                  <FieldLabel htmlFor="fallback-reply">兜底回复</FieldLabel>
+                                  <Textarea
+                                    id="fallback-reply"
+                                    rows={4}
+                                    value={autoReplyTaskForm.fallbackReply}
+                                    onChange={(event) =>
+                                      setAutoReplyTaskForm((current) => ({
+                                        ...current,
+                                        fallbackReply: event.target.value,
+                                      }))
+                                    }
+                                  />
+                                </Field>
+                              </div>
 
-              <div className="knowledge-list">
-                {knowledgeBase.map((doc) => (
-                  <article key={doc.id} className="knowledge-card">
-                    <strong>{doc.title}</strong>
-                    <p>{doc.summary}</p>
-                    <div className="citation-list">
-                      {doc.keywords.map((keyword) => (
-                        <span key={keyword}>{keyword}</span>
-                      ))}
+                              <Field>
+                                <FieldLabel htmlFor="keyword-replies">关键词回复 JSON</FieldLabel>
+                                <Textarea
+                                  id="keyword-replies"
+                                  rows={8}
+                                  value={autoReplyTaskForm.keywordRepliesText}
+                                  onChange={(event) =>
+                                    setAutoReplyTaskForm((current) => ({
+                                      ...current,
+                                      keywordRepliesText: event.target.value,
+                                    }))
+                                  }
+                                />
+                              </Field>
+
+                              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                <Field>
+                                  <FieldLabel htmlFor="poll-interval">轮询间隔（秒）</FieldLabel>
+                                  <Input
+                                    id="poll-interval"
+                                    value={autoReplyTaskForm.pollIntervalSeconds}
+                                    onChange={(event) =>
+                                      setAutoReplyTaskForm((current) => ({
+                                        ...current,
+                                        pollIntervalSeconds: event.target.value,
+                                      }))
+                                    }
+                                  />
+                                </Field>
+                                <Field>
+                                  <FieldLabel htmlFor="duplicate-window">去重窗口（秒）</FieldLabel>
+                                  <Input
+                                    id="duplicate-window"
+                                    value={autoReplyTaskForm.duplicateCooldownSeconds}
+                                    onChange={(event) =>
+                                      setAutoReplyTaskForm((current) => ({
+                                        ...current,
+                                        duplicateCooldownSeconds: event.target.value,
+                                      }))
+                                    }
+                                  />
+                                </Field>
+                                <Field orientation="horizontal">
+                                  <FieldContent>
+                                    <FieldLabel htmlFor="guard-enabled">启用守护</FieldLabel>
+                                    <FieldDescription>创建后立即进入后台监听。</FieldDescription>
+                                  </FieldContent>
+                                  <Switch
+                                    id="guard-enabled"
+                                    checked={autoReplyTaskForm.enabled}
+                                    onCheckedChange={(checked) =>
+                                      setAutoReplyTaskForm((current) => ({
+                                        ...current,
+                                        enabled: checked,
+                                      }))
+                                    }
+                                  />
+                                </Field>
+                                <Field orientation="horizontal">
+                                  <FieldContent>
+                                    <FieldLabel htmlFor="guard-dry-run">dryRun</FieldLabel>
+                                    <FieldDescription>打开后只演练流程，不会真的回复。</FieldDescription>
+                                  </FieldContent>
+                                  <Switch
+                                    id="guard-dry-run"
+                                    checked={autoReplyTaskForm.dryRun}
+                                    onCheckedChange={(checked) =>
+                                      setAutoReplyTaskForm((current) => ({
+                                        ...current,
+                                        dryRun: checked,
+                                      }))
+                                    }
+                                  />
+                                </Field>
+                              </div>
+                            </FieldGroup>
+
+                            <Alert className="app-tint-violet">
+                              <WorkflowIcon />
+                              <AlertTitle>守护执行逻辑</AlertTitle>
+                              <AlertDescription>
+                                任务会先截图当前微信聊天界面，确认是否就是目标会话；如果不是，再搜索切回目标，然后结合历史聊天与最后一条待回复消息生成回复。
+                              </AlertDescription>
+                            </Alert>
+
+                            <Alert className={cn(autoReplyTaskForm.enabled && !autoReplyTaskForm.dryRun ? 'app-tint-green' : 'app-tint-amber')}>
+                              <ShieldCheckIcon />
+                              <AlertTitle>
+                                {autoReplyTaskForm.enabled
+                                  ? autoReplyTaskForm.dryRun
+                                    ? '当前为演练模式'
+                                    : '当前为真实执行模式'
+                                  : '当前未启用守护'}
+                              </AlertTitle>
+                              <AlertDescription>{getAutoReplyLaunchSummary(autoReplyTaskForm)}</AlertDescription>
+                            </Alert>
+
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              {activeAutoReplyTask ? (
+                                <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                                  <span>当前守护中：{String(activeAutoReplyTask.payload.targetName || '未命名目标')}</span>
+                                  <span>{activeAutoReplyTask.result || '后台守护正在运行中。'}</span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  当前没有正在运行的微信自动回复守护任务。
+                                </span>
+                              )}
+                              <Button type="submit">
+                                <ShieldCheckIcon data-icon="inline-start" />
+                                创建守护任务
+                              </Button>
+                            </div>
+                          </form>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="app-shell-card xl:col-span-12">
+                        <CardHeader>
+                          <CardTitle>任务中心</CardTitle>
+                          <CardDescription>用筛选、搜索和详情面板一起定位任务状态与问题原因。</CardDescription>
+                          <CardAction>
+                            <Button type="button" variant="outline" size="sm" onClick={handleClearHistory}>
+                              整理历史
+                            </Button>
+                          </CardAction>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-5">
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <SummaryTile
+                              label="全部任务"
+                              value={String(snapshot.queue.length)}
+                              detail="已入列的桌面任务总数"
+                              tone="blue"
+                            />
+                            <SummaryTile
+                              label="运行中"
+                              value={String(getTaskFilterCount(snapshot.queue, 'active'))}
+                              detail="排队、执行和后台守护"
+                              tone="green"
+                            />
+                            <SummaryTile
+                              label="微信任务"
+                              value={String(getTaskFilterCount(snapshot.queue, 'wechat'))}
+                              detail="含群发、守护和 SOP"
+                              tone="violet"
+                            />
+                            <SummaryTile
+                              label="异常 / 已停"
+                              value={String(
+                                getTaskFilterCount(snapshot.queue, 'failed') +
+                                  getTaskFilterCount(snapshot.queue, 'stopped'),
+                              )}
+                              detail="需要人工关注的任务"
+                              tone="rose"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                            <div className="flex flex-wrap gap-2">
+                              {taskFilters.map((filter) => (
+                                <Button
+                                  key={filter.key}
+                                  type="button"
+                                  variant={taskFilter === filter.key ? 'secondary' : 'ghost'}
+                                  size="sm"
+                                  onClick={() => {
+                                    setTaskFilter(filter.key)
+                                    const nextSelected = snapshot.queue.find((task) =>
+                                      taskMatchesFilter(task, filter.key),
+                                    )
+                                    setSelectedTaskId(nextSelected?.id || null)
+                                  }}
+                                >
+                                  {filter.label}
+                                  <Badge variant="outline" className="ml-1">
+                                    {getTaskFilterCount(snapshot.queue, filter.key)}
+                                  </Badge>
+                                </Button>
+                              ))}
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-[minmax(0,260px)_180px]">
+                              <div className="relative">
+                                <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                  className="pl-9"
+                                  value={taskQuery}
+                                  onChange={(event) => setTaskQuery(event.target.value)}
+                                  placeholder="按任务名、SOP、平台或结果搜索"
+                                />
+                              </div>
+                              <Select
+                                value={taskSort}
+                                onValueChange={(value) => setTaskSort(value as TaskSortKey)}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="排序方式" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectItem value="updated_desc">最近更新</SelectItem>
+                                    <SelectItem value="created_desc">最近创建</SelectItem>
+                                    <SelectItem value="status_priority">按状态优先级</SelectItem>
+                                    <SelectItem value="name_asc">按名称</SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+                            <Card size="sm" className="app-shell-card app-tint-blue">
+                              <CardHeader>
+                                <CardTitle className="text-sm">任务列表</CardTitle>
+                                <CardDescription>选择一条任务查看完整 payload、日志和产物。</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                <ScrollArea className="h-[520px]">
+                                  <div className="flex flex-col gap-3 pr-4">
+                                    {filteredTasks.length ? (
+                                      filteredTasks.map((task) => (
+                                        <button
+                                          key={task.id}
+                                          type="button"
+                                          className={cn(
+                                            'rounded-xl border p-4 text-left transition-colors',
+                                            selectedTask?.id === task.id
+                                              ? 'app-tint-blue bg-secondary text-secondary-foreground'
+                                              : 'bg-background hover:bg-muted/70',
+                                          )}
+                                          onClick={() => setSelectedTaskId(task.id)}
+                                        >
+                                          <div className="flex flex-col gap-2">
+                                            <div className="flex items-start justify-between gap-3">
+                                              <div className="min-w-0">
+                                                <p className="truncate font-medium">{task.name}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {task.sopCode}
+                                                </p>
+                                              </div>
+                                              <Badge variant={getTaskBadge(task).variant}>
+                                                {getTaskBadge(task).label}
+                                              </Badge>
+                                            </div>
+                                            <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                                              <span className="truncate">{task.platforms.join(' / ')}</span>
+                                              <span>{formatDateTime(task.updatedAt)}</span>
+                                            </div>
+                                          </div>
+                                        </button>
+                                      ))
+                                    ) : (
+                                      <Empty>
+                                        <EmptyHeader>
+                                          <EmptyMedia variant="icon">
+                                            <SearchIcon />
+                                          </EmptyMedia>
+                                          <EmptyTitle>这个筛选下还没有任务</EmptyTitle>
+                                          <EmptyDescription>
+                                            你可以先创建一条模板任务，或者切换筛选查看其他任务状态。
+                                          </EmptyDescription>
+                                        </EmptyHeader>
+                                      </Empty>
+                                    )}
+                                  </div>
+                                </ScrollArea>
+                              </CardContent>
+                            </Card>
+
+                            {selectedTask ? (
+                              <TaskDetailCard
+                                task={selectedTask}
+                                onStop={handleStopTask}
+                                onRetry={handleRetryTask}
+                                onCopyPayload={(task) =>
+                                  handleCopyText(formatJson(task.payload), '任务载荷已复制到剪贴板。')
+                                }
+                                onCopyLogs={(task) =>
+                                  handleCopyText(task.logs.join('\n'), '任务日志已复制到剪贴板。')
+                                }
+                              />
+                            ) : (
+                              <Card className="app-shell-card">
+                                <CardContent className="flex min-h-[520px] items-center justify-center">
+                                  <Empty>
+                                    <EmptyHeader>
+                                      <EmptyMedia variant="icon">
+                                        <FolderKanbanIcon />
+                                      </EmptyMedia>
+                                      <EmptyTitle>还没有选中任务</EmptyTitle>
+                                      <EmptyDescription>
+                                        从左侧任务列表选一条，就能查看 payload、日志、结果和停止操作。
+                                      </EmptyDescription>
+                                    </EmptyHeader>
+                                  </Empty>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
-                  </article>
-                ))}
-              </div>
-            </section>
+                  </TabsContent>
 
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">FUNCTION CALLING</p>
-                  <h3>AI 推荐的下一步</h3>
-                </div>
-              </div>
+                  <TabsContent value="ai" className="mt-0 flex flex-col gap-4">
+                    <div className="grid gap-4 xl:grid-cols-12">
+                      <Card className="app-shell-card app-tint-violet xl:col-span-7">
+                        <CardHeader>
+                          <CardTitle>AI 执行助理</CardTitle>
+                          <CardDescription>根据你的业务目标、当前设备状态和知识库上下文生成下一步动作。</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                          <ScrollArea className="h-[540px] rounded-xl border bg-muted/30">
+                            <div className="flex flex-col gap-3 p-4">
+                              {messages.map((message) => (
+                                <div
+                                  key={message.id}
+                                  className={cn(
+                                    'flex flex-col gap-3 rounded-2xl border p-4',
+                                    message.role === 'assistant' ? 'app-tint-blue' : 'app-tint-cyan',
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="font-medium">
+                                      {message.role === 'assistant' ? 'AI 助手' : '你'}
+                                    </p>
+                                    {message.suggestion ? <Badge variant="secondary">可执行建议</Badge> : null}
+                                  </div>
+                                  <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                                  {message.citations?.length ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      {message.citations.map((citation) => (
+                                        <Badge key={citation} variant="outline">
+                                          {citation}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  {message.suggestion ? (
+                                    <div className="app-tint-violet flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
+                                      <div className="min-w-0">
+                                        <p className="truncate font-medium">{message.suggestion.task.name}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                          AI 已经把建议整理成可执行任务。
+                                        </p>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={() => handleSuggestion(message.suggestion!.task)}
+                                      >
+                                        <SparklesIcon data-icon="inline-start" />
+                                        {message.suggestion.label}
+                                      </Button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
 
-              {latestAssistant?.suggestion ? (
-                <div className="suggestion-card">
-                  <strong>{latestAssistant.suggestion.task.name}</strong>
-                  <p>最近一条 AI 建议已经生成了可执行任务，可以直接下发到队列。</p>
-                  <pre>{formatJson((latestAssistant.suggestion.task.payload ?? {}) as Record<string, unknown>)}</pre>
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => handleSuggestion(latestAssistant.suggestion!.task)}
-                  >
-                    执行这条建议
-                  </button>
-                </div>
-              ) : (
-                <div className="empty-card">
-                  <strong>还没有生成新的执行建议</strong>
-                  <p>先向 AI 描述你的业务目标，例如“扫描小红书评论区并私信高意向用户”。</p>
-                </div>
-              )}
+                          <form className="flex flex-col gap-4" onSubmit={handleAskAssistant}>
+                            <FieldGroup>
+                              <Field>
+                                <FieldLabel htmlFor="assistant-input">告诉 AI 你的业务目标</FieldLabel>
+                                <Textarea
+                                  id="assistant-input"
+                                  rows={4}
+                                  value={chatInput}
+                                  onChange={(event) => setChatInput(event.target.value)}
+                                  placeholder="例如：帮我给高意向客户群发今晚直播提醒，并把自动回复一起开起来。"
+                                />
+                              </Field>
+                            </FieldGroup>
+                            <div className="flex justify-end">
+                              <Button type="submit">
+                                <SendIcon data-icon="inline-start" />
+                                生成建议
+                              </Button>
+                            </div>
+                          </form>
+                        </CardContent>
+                      </Card>
 
-              <div className="status-strip">
-                <div>
-                  <span>设备在线</span>
-                  <strong>{snapshot.device.alias}</strong>
-                </div>
-                <div>
-                  <span>任务队列</span>
-                  <strong>{runningTasks.length} 条执行中 / 待执行</strong>
-                </div>
-              </div>
-            </section>
-          </section>
-        ) : null}
+                      <div className="flex flex-col gap-4 xl:col-span-5">
+                        <Card className="app-shell-card app-tint-cyan">
+                          <CardHeader>
+                            <CardTitle>本地知识命中</CardTitle>
+                            <CardDescription>知识库会作为上下文来源，帮助 AI 更准确地生成执行建议。</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex flex-col gap-3">
+                              {knowledgeBase.map((doc) => (
+                                <Card key={doc.id} size="sm" className="app-shell-card app-tint-cyan">
+                                  <CardHeader>
+                                    <CardTitle className="text-sm">{doc.title}</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="flex flex-col gap-3">
+                                    <p className="text-sm text-muted-foreground">{doc.summary}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {doc.keywords.map((keyword) => (
+                                        <Badge key={keyword} variant="outline">
+                                          {keyword}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
 
-        {activeTab === 'device' ? (
-          <section className="page-grid device-grid">
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">BINDING</p>
-                  <h3>设备绑定与身份信息</h3>
-                </div>
-              </div>
-
-              <form className="stack-form" onSubmit={handleBindSubmit}>
-                <label>
-                  <span>设备名称</span>
-                  <input
-                    value={deviceForm.alias}
-                    onChange={(event) =>
-                      setDeviceForm((current) => ({ ...current, alias: event.target.value }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>所属工作区</span>
-                  <input
-                    value={deviceForm.workspace}
-                    onChange={(event) =>
-                      setDeviceForm((current) => ({ ...current, workspace: event.target.value }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>AI 员工昵称</span>
-                  <input
-                    value={deviceForm.operatorName}
-                    onChange={(event) =>
-                      setDeviceForm((current) => ({
-                        ...current,
-                        operatorName: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-
-                <button type="submit" className="primary-button">
-                  更新绑定信息
-                </button>
-              </form>
-            </section>
-
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">SETTINGS</p>
-                  <h3>执行器开关</h3>
-                </div>
-              </div>
-
-              <div className="settings-list">
-                <SettingCard
-                  title="远程自动轮询"
-                  description="定时拉取手机端或后台下发的远程指令。"
-                  enabled={snapshot.device.autoPolling}
-                  onToggle={() => handleToggleSetting('autoPolling', !snapshot.device.autoPolling)}
-                />
-                <SettingCard
-                  title="AI 自动回复守护"
-                  description="保持微信自动回复、欢迎语和知识库问答在线。"
-                  enabled={snapshot.device.autoReply}
-                  onToggle={() => handleToggleSetting('autoReply', !snapshot.device.autoReply)}
-                />
-              </div>
-
-              <div className="status-strip">
-                <div>
-                  <span>绑定码</span>
-                  <strong>{snapshot.device.bindCode}</strong>
-                </div>
-                <div>
-                  <span>最后心跳</span>
-                  <strong>{formatDateTime(snapshot.device.heartbeatAt)}</strong>
-                </div>
-                <div>
-                  <span>系统版本</span>
-                  <strong>{snapshot.device.version}</strong>
-                </div>
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">PYTHON RPA</p>
-                  <h3>mac 微信执行环境巡检</h3>
-                </div>
-                <button type="button" className="ghost-button" onClick={handleRerunDoctor}>
-                  重新巡检
-                </button>
-              </div>
-
-              {snapshot.runnerHealth ? (
-                <div className="health-grid">
-                  <article className="setting-card">
-                    <div className="health-row">
-                      <strong>运行模式</strong>
-                      <span className="task-badge badge-running">
-                        {describeRunnerMode(snapshot.runnerHealth.mode)}
-                      </span>
+                        <Card className="app-shell-card app-tint-violet">
+                          <CardHeader>
+                            <CardTitle>AI 推荐的下一步</CardTitle>
+                            <CardDescription>把最近一条带 suggestion 的回复提炼成一条动作卡。</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {latestAssistant?.suggestion ? (
+                              <div className="flex flex-col gap-4">
+                                <Alert className="app-tint-violet">
+                                  <BotIcon />
+                                  <AlertTitle>{latestAssistant.suggestion.task.name}</AlertTitle>
+                                  <AlertDescription>
+                                    最近一条 AI 建议已经生成了可执行任务，可以直接下发到队列。
+                                  </AlertDescription>
+                                </Alert>
+                                <div className="app-tint-violet rounded-xl border p-4">
+                                  <pre className="text-xs leading-6 text-muted-foreground">
+                                    {formatJson(
+                                      (latestAssistant.suggestion.task.payload ?? {}) as Record<string, unknown>,
+                                    )}
+                                  </pre>
+                                </div>
+                                <Button type="button" onClick={() => handleSuggestion(latestAssistant.suggestion!.task)}>
+                                  <SparklesIcon data-icon="inline-start" />
+                                  执行这条建议
+                                </Button>
+                              </div>
+                            ) : (
+                              <Empty>
+                                <EmptyHeader>
+                                  <EmptyMedia variant="icon">
+                                    <BotIcon />
+                                  </EmptyMedia>
+                                  <EmptyTitle>还没有新的执行建议</EmptyTitle>
+                                  <EmptyDescription>
+                                    先向 AI 描述你的业务目标，例如扫描评论区并私信高意向用户。
+                                  </EmptyDescription>
+                                </EmptyHeader>
+                              </Empty>
+                            )}
+                          </CardContent>
+                          <CardFooter className="justify-between gap-3">
+                            <div className="text-sm text-muted-foreground">
+                              设备 {snapshot.device.alias}
+                            </div>
+                            <Badge variant="outline">{runningTasks.length} 条正在执行 / 待执行</Badge>
+                          </CardFooter>
+                        </Card>
+                      </div>
                     </div>
-                    <p>{snapshot.runnerHealth.detail}</p>
-                    <div className="citation-list">
-                      {snapshot.runnerHealth.capabilities.map((capability) => (
-                        <span key={capability}>{formatCapabilityLabel(capability)}</span>
-                      ))}
-                    </div>
-                    <div className="health-meta">
-                      <span>Python</span>
-                      <strong>{snapshot.runnerHealth.pythonBinary}</strong>
-                    </div>
-                  </article>
+                  </TabsContent>
 
-                  <article className="setting-card">
-                    <div className="health-row">
-                      <strong>mac 微信</strong>
-                      <span
-                        className={
-                          snapshot.runnerHealth.wechat?.available
-                            ? 'task-badge badge-completed'
-                            : 'task-badge badge-failed'
-                        }
-                      >
-                        {snapshot.runnerHealth.wechat?.available ? '可执行' : '待处理'}
-                      </span>
-                    </div>
-                    <p>{snapshot.runnerHealth.wechat?.detail || '尚未返回 mac 微信探测结果。'}</p>
-                    <div className="health-meta">
-                      <span>应用路径</span>
-                      <strong>{snapshot.runnerHealth.wechat?.appPath || '未发现'}</strong>
-                    </div>
-                    <div className="health-meta">
-                      <span>进程名</span>
-                      <strong>{snapshot.runnerHealth.wechat?.processName || '待探测'}</strong>
-                    </div>
-                    <div className="health-meta">
-                      <span>建议</span>
-                      <strong>
-                        {snapshot.runnerHealth.wechat?.available
-                          ? '先用 dryRun 校验联系人和文案，再正式发送。'
-                          : '先启动并登录微信，再检查辅助功能和自动化权限。'}
-                      </strong>
-                    </div>
-                  </article>
-                </div>
-              ) : (
-                <div className="empty-card">
-                  <strong>巡检结果尚未返回</strong>
-                  <p>主进程启动后会自动巡检 Python RPA 和 mac 微信环境，也可以手动重新巡检。</p>
-                </div>
-              )}
-            </section>
+                  <TabsContent value="device" className="mt-0 flex flex-col gap-4">
+                    <div className="grid gap-4 xl:grid-cols-12">
+                      <Card className="app-shell-card app-tint-blue xl:col-span-4">
+                        <CardHeader>
+                          <CardTitle>设备绑定与身份信息</CardTitle>
+                          <CardDescription>修改设备名、工作区和 AI 员工昵称，写回本地状态。</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <form className="flex flex-col gap-5" onSubmit={handleBindSubmit}>
+                            <FieldGroup>
+                              <Field>
+                                <FieldLabel htmlFor="device-alias">设备名称</FieldLabel>
+                                <Input
+                                  id="device-alias"
+                                  value={deviceForm.alias}
+                                  onChange={(event) =>
+                                    setDeviceForm((current) => ({ ...current, alias: event.target.value }))
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel htmlFor="device-workspace">所属工作区</FieldLabel>
+                                <Input
+                                  id="device-workspace"
+                                  value={deviceForm.workspace}
+                                  onChange={(event) =>
+                                    setDeviceForm((current) => ({ ...current, workspace: event.target.value }))
+                                  }
+                                />
+                              </Field>
+                              <Field>
+                                <FieldLabel htmlFor="device-operator">AI 员工昵称</FieldLabel>
+                                <Input
+                                  id="device-operator"
+                                  value={deviceForm.operatorName}
+                                  onChange={(event) =>
+                                    setDeviceForm((current) => ({
+                                      ...current,
+                                      operatorName: event.target.value,
+                                    }))
+                                  }
+                                />
+                              </Field>
+                            </FieldGroup>
+                            <Button type="submit">
+                              <SendIcon data-icon="inline-start" />
+                              更新绑定信息
+                            </Button>
+                          </form>
+                        </CardContent>
+                      </Card>
 
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <p className="eyebrow">ACTIVITY</p>
-                  <h3>最近活动</h3>
-                </div>
-              </div>
+                      <Card className="app-shell-card app-tint-cyan xl:col-span-4">
+                        <CardHeader>
+                          <CardTitle>执行器开关</CardTitle>
+                          <CardDescription>开关级别的配置都放在这里，避免散落在多个页面里。</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                          <Field orientation="horizontal">
+                            <FieldContent>
+                              <FieldLabel htmlFor="setting-polling">远程自动轮询</FieldLabel>
+                              <FieldDescription>定时拉取手机端或后台下发的远程指令。</FieldDescription>
+                            </FieldContent>
+                            <Switch
+                              id="setting-polling"
+                              checked={snapshot.device.autoPolling}
+                              onCheckedChange={(checked) => handleToggleSetting('autoPolling', checked)}
+                            />
+                          </Field>
+                          <Separator />
+                          <Field orientation="horizontal">
+                            <FieldContent>
+                              <FieldLabel htmlFor="setting-reply">AI 自动回复守护</FieldLabel>
+                              <FieldDescription>保持微信自动回复、欢迎语和知识库问答在线。</FieldDescription>
+                            </FieldContent>
+                            <Switch
+                              id="setting-reply"
+                              checked={snapshot.device.autoReply}
+                              onCheckedChange={(checked) => handleToggleSetting('autoReply', checked)}
+                            />
+                          </Field>
+                          <Separator />
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            <SummaryTile label="绑定码" value={snapshot.device.bindCode} detail="用于设备绑定" tone="blue" />
+                            <SummaryTile
+                              label="最后心跳"
+                              value={formatDateTime(snapshot.device.heartbeatAt)}
+                              detail="最近一次状态回传"
+                              tone="green"
+                            />
+                            <SummaryTile label="系统版本" value={snapshot.device.version} detail={snapshot.device.os} tone="violet" />
+                          </div>
+                        </CardContent>
+                      </Card>
 
-              <div className="activity-list">
-                {snapshot.activityFeed.map((entry) => (
-                  <article key={entry} className="activity-item">
-                    {entry}
-                  </article>
-                ))}
-              </div>
-            </section>
-          </section>
-        ) : null}
-      </main>
+                      <Card className="app-shell-card app-tint-violet xl:col-span-4">
+                        <CardHeader>
+                          <CardTitle>mac 微信执行环境巡检</CardTitle>
+                          <CardDescription>查看 Python 环境、执行模式和微信可用性。</CardDescription>
+                          <CardAction>
+                            <Button type="button" variant="outline" size="sm" onClick={handleRerunDoctor}>
+                              <RefreshCcwIcon data-icon="inline-start" />
+                              重新巡检
+                            </Button>
+                          </CardAction>
+                        </CardHeader>
+                        <CardContent>
+                          {snapshot.runnerHealth ? (
+                            <div className="flex flex-col gap-4">
+                              <Alert className="app-tint-blue">
+                                <CpuIcon />
+                                <AlertTitle>{describeRunnerMode(snapshot.runnerHealth.mode)}</AlertTitle>
+                                <AlertDescription>{snapshot.runnerHealth.detail}</AlertDescription>
+                              </Alert>
+
+                              <div className="app-tint-cyan flex flex-col gap-3 rounded-xl border p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-sm text-muted-foreground">mac 微信</span>
+                                  <Badge
+                                    variant={
+                                      snapshot.runnerHealth.wechat?.available ? 'secondary' : 'destructive'
+                                    }
+                                  >
+                                    {snapshot.runnerHealth.wechat?.available ? '可执行' : '待处理'}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm">{snapshot.runnerHealth.wechat?.detail || '待探测'}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Python: {snapshot.runnerHealth.pythonBinary}
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {snapshot.runnerHealth.capabilities.map((capability) => (
+                                    <Badge key={capability} variant="outline">
+                                      {formatCapabilityLabel(capability)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <Empty>
+                              <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                  <CpuIcon />
+                                </EmptyMedia>
+                                <EmptyTitle>巡检结果尚未返回</EmptyTitle>
+                                <EmptyDescription>
+                                  主进程启动后会自动巡检 Python RPA 和 mac 微信环境，也可以手动重新巡检。
+                                </EmptyDescription>
+                              </EmptyHeader>
+                            </Empty>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <Card className="app-shell-card xl:col-span-12">
+                        <CardHeader>
+                          <CardTitle>最近活动</CardTitle>
+                          <CardDescription>保留一条短时间窗，方便回看哪些操作刚刚在桌面端发生。</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <ScrollArea className="h-64">
+                            <div className="flex flex-col gap-3 pr-4">
+                              {snapshot.activityFeed.map((entry, index) => (
+                                <div
+                                  key={`${entry}-${index}`}
+                                  className={cn(
+                                    'flex items-start gap-3 rounded-xl border p-4',
+                                    index % 3 === 0 ? 'app-tint-blue' : index % 3 === 1 ? 'app-tint-green' : 'app-tint-violet',
+                                  )}
+                                >
+                                  <ActivityIcon className="mt-0.5 size-4 text-muted-foreground" />
+                                  <p className="text-sm leading-6">{entry}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+                </div>
+              </ScrollArea>
+            </main>
+          </Tabs>
+        </div>
+
+        <SheetContent side="left" className="w-[22rem] p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>主导航</SheetTitle>
+            <SheetDescription>切换 MyClaw Desktop 的主要工作区。</SheetDescription>
+          </SheetHeader>
+          <WorkspaceNavigation
+            activeTab={activeTab}
+            onSelect={(tabKey) => {
+              setActiveTab(tabKey)
+              setMobileNavOpen(false)
+            }}
+            snapshot={snapshot}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
 
-function TaskCard({
-  task,
-  onStop,
+function WorkspaceNavigation({
+  activeTab,
+  onSelect,
+  snapshot,
 }: {
-  task: QueueTask
-  onStop?: (taskId: string) => void
+  activeTab: TabKey
+  onSelect: (tabKey: TabKey) => void
+  snapshot: AppSnapshot
 }) {
-  const artifactSummary = task.artifacts
-    ? Object.values(task.artifacts)
-        .filter((artifact): artifact is Record<string, unknown> => typeof artifact === 'object' && artifact !== null)
-        .map((artifact) => String(artifact.summary || artifact.driver || '').trim())
-        .filter(Boolean)
-    : []
-  const badge = getTaskBadge(task)
-  const stoppable = canStopTask(task) && onStop
-
   return (
-    <article className={`task-card task-${task.status}`}>
-      <div className="task-topline">
-        <div>
-          <strong>{task.name}</strong>
-          <span>
-            {task.source.toUpperCase()} · {formatDateTime(task.createdAt)}
-          </span>
-          <span>
-            SOP {task.sopCode} · {task.platforms.join(' / ')}
-          </span>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-col gap-4 p-4">
+        <div className="app-sidebar-brand flex items-center gap-3 rounded-2xl border p-4">
+          <Avatar className="size-11 rounded-2xl">
+            <AvatarFallback>MC</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">MyClaw Desktop</p>
+            <p className="truncate text-base font-semibold">桌面执行工作台</p>
+            <p className="text-sm text-muted-foreground">设备、队列、AI 建议在一个界面协同。</p>
+          </div>
         </div>
-        <div className="task-actions">
-          <span className={`task-badge ${badge.tone}`}>{badge.label}</span>
-          {stoppable ? (
-            <button
-              type="button"
-              className="ghost-button ghost-button-danger"
-              onClick={() => onStop?.(task.id)}
-            >
-              {task.backgroundActive ? '停止守护' : '停止任务'}
-            </button>
-          ) : null}
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+          <Card size="sm" className="app-shell-card app-tint-blue">
+            <CardContent className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-muted-foreground">在线状态</span>
+                <Badge variant={snapshot.device.online ? 'secondary' : 'outline'}>
+                  {snapshot.device.online ? '运行中' : '离线'}
+                </Badge>
+              </div>
+              <p className="font-medium">{snapshot.device.alias}</p>
+              <p className="text-sm text-muted-foreground">{snapshot.device.workspace}</p>
+            </CardContent>
+          </Card>
+
+          <Card size="sm" className="app-shell-card app-tint-cyan">
+            <CardContent className="flex flex-col gap-1">
+              <span className="text-sm text-muted-foreground">队列任务</span>
+              <p className="font-medium">{queueCount(snapshot.queue)} 条</p>
+              <p className="text-sm text-muted-foreground">
+                CPU {snapshot.device.cpuLoad}% · 内存 {snapshot.device.memoryUsage}%
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      <div className="progress-track">
-        <div className="progress-bar" style={{ width: `${task.progress}%` }}></div>
-      </div>
+      <Separator />
 
-      <div className="task-meta">
-        <pre>{formatJson(task.payload)}</pre>
-        <div className="task-log-list">
-          {task.logs.slice(-3).map((log, index) => (
-            <p key={`${task.id}-summary-log-${index}`}>{log}</p>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-6 p-4">
+          {tabGroups.map((group) => (
+            <div key={group.title} className="flex flex-col gap-2">
+              <p className="px-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">{group.title}</p>
+              <div className="flex flex-col gap-1">
+                {group.tabs.map((tab) => (
+                  <Button
+                    key={tab.key}
+                    type="button"
+                    variant={tab.key === activeTab ? 'secondary' : 'ghost'}
+                    className="h-auto w-full justify-start rounded-xl px-3 py-3"
+                    onClick={() => onSelect(tab.key)}
+                  >
+                    <tab.icon data-icon="inline-start" />
+                    <div className="min-w-0 text-left">
+                      <div className="truncate text-sm font-medium">{tab.label}</div>
+                      <div className="truncate text-xs text-muted-foreground">{tab.description}</div>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
           ))}
-          {task.engineMode ? <p>执行模式：{task.engineMode}</p> : null}
-          {artifactSummary.length ? <p>步骤结果：{artifactSummary.join(' / ')}</p> : null}
-          {task.result ? <strong>{task.result}</strong> : null}
         </div>
+      </ScrollArea>
+
+      <div className="border-t p-4">
+        <Card size="sm" className="app-shell-card app-tint-violet">
+          <CardContent className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm text-muted-foreground">AI 员工</p>
+              <p className="truncate font-medium">{snapshot.device.operatorName}</p>
+            </div>
+            <Badge variant="outline">{snapshot.device.bindCode}</Badge>
+          </CardContent>
+        </Card>
       </div>
-    </article>
+    </div>
   )
 }
 
-function TaskDetailPanel({
+function SummaryTile({
+  label,
+  value,
+  detail,
+  tone = 'blue',
+}: {
+  label: string
+  value: string
+  detail: string
+  tone?: AccentTone
+}) {
+  return (
+    <Card size="sm" className={cn('app-shell-card', getTintClass(tone))}>
+      <CardHeader>
+        <CardTitle className="text-sm">{label}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-1">
+        <p className="text-xl font-semibold tracking-tight">{value}</p>
+        <p className="text-sm text-muted-foreground">{detail}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function TaskPreviewCard({
+  task,
+  onStop,
+  onSelect,
+}: {
+  task: QueueTask
+  onStop?: (taskId: string) => void
+  onSelect?: () => void
+}) {
+  const badge = getTaskBadge(task)
+
+  return (
+    <Card size="sm" className={cn('app-shell-card', getTintClass(getTaskTone(task)))}>
+      <CardHeader>
+        <CardTitle className="flex items-start justify-between gap-3 text-sm">
+          <span className="truncate">{task.name}</span>
+          <Badge variant={badge.variant}>{badge.label}</Badge>
+        </CardTitle>
+        <CardDescription>
+          {task.platforms.join(' / ')} · {task.sopCode}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <Progress value={task.progress} />
+        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+          <span>{formatDateTime(task.updatedAt)}</span>
+          <span>{task.result || task.logs.at(-1) || '等待新的执行反馈。'}</span>
+        </div>
+      </CardContent>
+      <CardFooter className="justify-between gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onSelect}>
+          查看详情
+        </Button>
+        {canStopTask(task) ? (
+          <Button type="button" variant="destructive" size="sm" onClick={() => onStop?.(task.id)}>
+            停止
+          </Button>
+        ) : null}
+      </CardFooter>
+    </Card>
+  )
+}
+
+function TaskDetailCard({
   task,
   onStop,
   onRetry,
@@ -1532,7 +2166,6 @@ function TaskDetailPanel({
   onCopyLogs?: (task: QueueTask) => void
 }) {
   const badge = getTaskBadge(task)
-  const stoppable = canStopTask(task) && onStop
   const artifactSummary = task.artifacts
     ? Object.entries(task.artifacts).filter((entry): entry is [string, Record<string, unknown>] => {
         return typeof entry[1] === 'object' && entry[1] !== null
@@ -1540,171 +2173,111 @@ function TaskDetailPanel({
     : []
 
   return (
-    <article className="task-detail-panel">
-      <div className="task-detail-head">
-        <div>
-          <p className="eyebrow">SELECTED TASK</p>
-          <h4>{task.name}</h4>
-          <span className="task-detail-subtitle">
-            {task.source.toUpperCase()} · {task.sopCode} · {task.platforms.join(' / ')}
-          </span>
+    <Card className={cn('app-shell-card', getTintClass(getTaskTone(task)))}>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center justify-between gap-3">
+          <span className="truncate">{task.name}</span>
+          <Badge variant={badge.variant}>{badge.label}</Badge>
+        </CardTitle>
+        <CardDescription>
+          {task.source.toUpperCase()} · {task.sopCode} · {task.platforms.join(' / ')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-5">
+        <div className="grid gap-4 md:grid-cols-3">
+          <SummaryTile label="创建时间" value={formatDateTime(task.createdAt)} detail="进入桌面队列时间" tone="blue" />
+          <SummaryTile label="最近更新" value={formatDateTime(task.updatedAt)} detail="最近一次任务反馈" tone="cyan" />
+          <SummaryTile label="进度" value={`${task.progress}%`} detail={task.engineMode || '等待执行模式回传'} tone="green" />
         </div>
-        <div className="task-actions">
-          <span className={`task-badge ${badge.tone}`}>{badge.label}</span>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() => onRetry?.(task)}
-          >
+
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">执行进度</span>
+            <span className="font-medium">{task.progress}%</span>
+          </div>
+          <Progress value={task.progress} />
+        </div>
+
+        {task.result ? (
+          <Alert className={cn(getTintClass(getTaskTone(task)))}>
+            <SparklesIcon />
+            <AlertTitle>当前结果</AlertTitle>
+            <AlertDescription>{task.result}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card size="sm" className="app-shell-card app-tint-blue">
+            <CardHeader>
+              <CardTitle className="text-sm">任务载荷</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="app-tint-blue rounded-xl border p-4">
+                <pre className="text-xs leading-6 text-muted-foreground">{formatJson(task.payload)}</pre>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card size="sm" className="app-shell-card app-tint-cyan">
+            <CardHeader>
+              <CardTitle className="text-sm">最近日志</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="app-tint-cyan h-64 rounded-xl border">
+                <div className="flex flex-col gap-3 p-4">
+                  {task.logs.slice().reverse().map((log, index) => (
+                    <p key={`${task.id}-detail-log-${index}`} className="text-sm leading-6">
+                      {log}
+                    </p>
+                  ))}
+                  {task.engineMode ? (
+                    <p className="text-sm text-muted-foreground">执行模式：{task.engineMode}</p>
+                  ) : null}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+
+        {artifactSummary.length ? (
+          <Card size="sm" className="app-shell-card app-tint-violet">
+            <CardHeader>
+              <CardTitle className="text-sm">步骤产物</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              {artifactSummary.map(([key, artifact]) => (
+                <div key={key} className="app-tint-violet rounded-xl border p-4">
+                  <p className="font-medium">{key}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {String(artifact.summary || artifact.driver || '已记录产物')}
+                  </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
+      </CardContent>
+      <CardFooter className="flex flex-wrap justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => onRetry?.(task)}>
+            <RefreshCcwIcon data-icon="inline-start" />
             重新执行
-          </button>
-          {stoppable ? (
-            <button
-              type="button"
-              className="ghost-button ghost-button-danger"
-              onClick={() => onStop?.(task.id)}
-            >
-              {task.backgroundActive ? '停止守护' : '停止任务'}
-            </button>
-          ) : null}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => onCopyPayload?.(task)}>
+            <CopyIcon data-icon="inline-start" />
+            复制载荷
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => onCopyLogs?.(task)}>
+            <CopyIcon data-icon="inline-start" />
+            复制日志
+          </Button>
         </div>
-      </div>
-
-      <div className="task-detail-stats">
-        <div>
-          <span>创建时间</span>
-          <strong>{formatDateTime(task.createdAt)}</strong>
-        </div>
-        <div>
-          <span>最近更新</span>
-          <strong>{formatDateTime(task.updatedAt)}</strong>
-        </div>
-        <div>
-          <span>进度</span>
-          <strong>{task.progress}%</strong>
-        </div>
-      </div>
-
-      <div className="progress-track">
-        <div className="progress-bar" style={{ width: `${task.progress}%` }}></div>
-      </div>
-
-      {task.result ? (
-        <div className="task-detail-highlight">
-          <span>当前结果</span>
-          <strong>{task.result}</strong>
-        </div>
-      ) : null}
-
-      <div className="task-detail-toolbar">
-        <button type="button" className="ghost-button" onClick={() => onCopyPayload?.(task)}>
-          复制载荷
-        </button>
-        <button type="button" className="ghost-button" onClick={() => onCopyLogs?.(task)}>
-          复制日志
-        </button>
-      </div>
-
-      <div className="task-detail-grid">
-        <section className="task-detail-block">
-          <div className="task-detail-block-head">
-            <strong>任务载荷</strong>
-          </div>
-          <pre>{formatJson(task.payload)}</pre>
-        </section>
-
-        <section className="task-detail-block">
-          <div className="task-detail-block-head">
-            <strong>最近日志</strong>
-          </div>
-          <div className="task-log-list">
-            {task.logs.slice().reverse().map((log, index) => (
-              <p key={`${task.id}-detail-log-${index}`}>{log}</p>
-            ))}
-            {task.engineMode ? <p>执行模式：{task.engineMode}</p> : null}
-          </div>
-        </section>
-      </div>
-
-      {artifactSummary.length ? (
-        <section className="task-detail-block">
-          <div className="task-detail-block-head">
-            <strong>步骤产物</strong>
-          </div>
-          <div className="task-artifact-list">
-            {artifactSummary.map(([key, artifact]) => (
-              <article key={key} className="task-artifact-item">
-                <strong>{key}</strong>
-                <p>{String(artifact.summary || artifact.driver || '已记录产物')}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </article>
-  )
-}
-
-function SettingCard({
-  title,
-  description,
-  enabled,
-  onToggle,
-}: {
-  title: string
-  description: string
-  enabled: boolean
-  onToggle: () => void
-}) {
-  return (
-    <article className="setting-card">
-      <div>
-        <strong>{title}</strong>
-        <p>{description}</p>
-      </div>
-      <button type="button" className={enabled ? 'toggle is-on' : 'toggle'} onClick={onToggle}>
-        {enabled ? '开启' : '关闭'}
-      </button>
-    </article>
-  )
-}
-
-function MyClawMark() {
-  return (
-    <div className="brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="myclaw-brand-gradient" x1="18" y1="16" x2="96" y2="98">
-            <stop offset="0%" stopColor="#ff9d86" />
-            <stop offset="48%" stopColor="#ff4b4b" />
-            <stop offset="100%" stopColor="#bb1328" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M39 92C45 97 55 100 67 97C80 93 88 84 91 72C93 64 91 55 87 47L79 49C81 54 82 59 81 64C79 73 73 80 63 83C56 85 50 83 45 79L39 92Z"
-          fill="url(#myclaw-brand-gradient)"
-        />
-        <path
-          d="M58 29C46 18 28 17 18 29C10 39 10 54 19 64C24 70 31 73 39 73C44 73 49 72 54 69L49 57C45 60 39 61 34 58C28 54 26 46 30 40C35 33 45 33 52 39L58 29Z"
-          fill="url(#myclaw-brand-gradient)"
-        />
-        <path
-          d="M79 24C65 17 50 19 41 31C34 40 34 54 41 63C47 70 57 74 69 73L70 61C61 61 55 58 52 53C49 49 49 44 53 39C58 33 67 33 76 38L79 24Z"
-          fill="url(#myclaw-brand-gradient)"
-        />
-        <path
-          d="M41 30C47 27 54 27 60 30"
-          stroke="#ffd8d8"
-          strokeWidth="4"
-          strokeLinecap="round"
-        />
-        <path
-          d="M46 87L55 68"
-          stroke="#ffccd4"
-          strokeWidth="5"
-          strokeLinecap="round"
-        />
-      </svg>
-    </div>
+        {canStopTask(task) ? (
+          <Button type="button" variant="destructive" size="sm" onClick={() => onStop?.(task.id)}>
+            停止任务
+          </Button>
+        ) : null}
+      </CardFooter>
+    </Card>
   )
 }
