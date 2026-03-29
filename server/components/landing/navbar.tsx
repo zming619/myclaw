@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCloud } from "@fortawesome/free-solid-svg-icons";
+import { siteConfig } from "@/lib/config";
 
 const navLinks = [
   { name: "官网首页", href: "#" },
@@ -26,7 +27,7 @@ export function Navbar() {
                <FontAwesomeIcon icon={faCloud} className="text-xl" />
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-900">
-              星云 <span className="text-brand">Claw</span>
+              {siteConfig.name.split(' ')[0]} <span className="text-brand">{siteConfig.name.split(' ')[1]}</span>
             </span>
           </Link>
           <nav className="hidden lg:flex items-center gap-6">
@@ -34,7 +35,7 @@ export function Navbar() {
               <Link
                 key={link.name}
                 href={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-brand"
+                className="text-sm font-medium transition-colors hover:text-brand"
               >
                 {link.name}
               </Link>

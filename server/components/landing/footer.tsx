@@ -1,8 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCloud } from "@fortawesome/free-solid-svg-icons";
+import { siteConfig } from "@/lib/config";
 
 const footerLinks = [
   {
@@ -40,11 +39,11 @@ export function Footer() {
                 <FontAwesomeIcon icon={faCloud} className="text-xl" />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">
-                星云 <span className="text-[#2563eb]">Claw</span>
+                {siteConfig.name.split(' ')[0]} <span className="text-[#2563eb]">{siteConfig.name.split(' ')[1]}</span>
               </span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed">
-              AI + RPA 全链路自动运营平台。一部手机控制多台电脑干活。
+              {siteConfig.description}
             </p>
           </div>
           
@@ -65,7 +64,7 @@ export function Footer() {
         </div>
 
         <div className="pt-8 border-t border-white/5 text-center text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-          <p>© {new Date().getFullYear()} 星云 Claw. 天津九度星火科技技术支持</p>
+          <p>© {new Date().getFullYear()} {siteConfig.name}. 天津九度星火科技技术支持</p>
           <p className="mt-2">津ICP备2021006557号-5</p>
         </div>
       </div>

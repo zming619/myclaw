@@ -13,12 +13,12 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 
 const platforms = [
-  { name: "抖音", icon: faTiktok, desc: "发布 · 互动 · 获客", color: "text-slate-900" },
-  { name: "快手", icon: faFire, desc: "发布 · 互动 · 获客", color: "text-orange-500" },
-  { name: "小红书", icon: faBookOpen, desc: "发布 · 互动 · 获客", color: "text-red-500" },
-  { name: "微信", icon: faWeixin, desc: "消息 · 朋友圈 · SOP", color: "text-emerald-500" },
-  { name: "视频号", icon: faCirclePlay, desc: "发布 · 登录", color: "text-orange-600" },
-  { name: "B站", icon: faDesktop, desc: "视频发布", color: "text-blue-400" },
+  { name: "抖音", icon: faTiktok, desc: "发布 · 互动 · 获客", color: "text-white", bgColor: "bg-black" },
+  { name: "快手", icon: faFire, desc: "发布 · 互动 · 获客", color: "text-white", bgColor: "bg-[#ff6600]" },
+  { name: "小红书", icon: faBookOpen, desc: "发布 · 互动 · 获客", color: "text-white", bgColor: "bg-[#ff2442]" },
+  { name: "微信", icon: faWeixin, desc: "消息 · 朋友圈 · SOP", color: "text-white", bgColor: "bg-[#07c160]" },
+  { name: "视频号", icon: faCirclePlay, desc: "发布 · 登录", color: "text-white", bgColor: "bg-[#07c160]" },
+  { name: "B站", icon: faDesktop, desc: "视频发布", color: "text-white", bgColor: "bg-[#00a1d6]" },
 ];
 
 export function RPAEngine() {
@@ -76,12 +76,12 @@ export function RPAEngine() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {platforms.map((platform, i) => (
               <Reveal key={platform.name} delay={i * 100} threshold={0.1}>
-                <div className="flex flex-col items-center justify-center p-8 rounded-2xl bg-surface border border-border group hover:border-brand/40 hover:bg-white hover:shadow-lg transition-all">
-                  <div className="h-12 w-12 mb-4 bg-white rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-surface border border-border group hover:border-brand/40 hover:bg-white hover:shadow-lg transition-all">
+                  <div className={`h-14 w-14 mb-4 ${platform.bgColor} rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform`}>
                     <FontAwesomeIcon icon={platform.icon} className={`${platform.color} text-2xl`} />
                   </div>
                   <div className="text-lg font-bold mb-1">{platform.name}</div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest text-center">{platform.desc}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest text-center">{platform.desc}</div>
                 </div>
               </Reveal>
             ))}

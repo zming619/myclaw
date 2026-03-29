@@ -1,9 +1,11 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-
+import { config } from "@fortawesome/fontawesome-svg-core"
+import "@fortawesome/fontawesome-svg-core/styles.css"
 import { TooltipProvider } from "@/components/ui/tooltip"
-
 import "./globals.css"
+
+config.autoAddCss = false
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -15,9 +17,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
+import { siteConfig } from "@/lib/config"
+
 export const metadata: Metadata = {
-  title: "MyClaw",
-  description: "MyClaw 微信自动回复与模型设置后台",
+  title: siteConfig.name,
+  description: siteConfig.description,
 }
 
 export default function RootLayout({
