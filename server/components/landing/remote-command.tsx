@@ -14,9 +14,18 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 const commands = [
-  "群发消息", "视频发布", "朋友圈营销", "自动回复", "SOP推送", 
-  "公域获客", "主动激活", "标签管理", "视频批量编辑", "剪映草稿生成", 
-  "自动曝光", "设备状态查询"
+  { name: "群发消息", color: "text-blue-400", border: "border-blue-400/20", bg: "bg-blue-400/5" },
+  { name: "视频发布", color: "text-purple-400", border: "border-purple-400/20", bg: "bg-purple-400/5" },
+  { name: "朋友圈营销", color: "text-green-400", border: "border-green-400/20", bg: "bg-green-400/5" },
+  { name: "自动回复", color: "text-cyan-400", border: "border-cyan-400/20", bg: "bg-cyan-400/5" },
+  { name: "SOP推送", color: "text-indigo-400", border: "border-indigo-400/20", bg: "bg-indigo-400/5" },
+  { name: "公域获客", color: "text-amber-400", border: "border-amber-400/20", bg: "bg-amber-400/5" },
+  { name: "主动激活", color: "text-rose-400", border: "border-rose-400/20", bg: "bg-rose-400/5" },
+  { name: "标签管理", color: "text-slate-400", border: "border-slate-400/20", bg: "bg-slate-400/5" },
+  { name: "视频批量编辑", color: "text-pink-400", border: "border-pink-400/20", bg: "bg-pink-400/5" },
+  { name: "剪映草稿生成", color: "text-orange-400", border: "border-orange-400/20", bg: "bg-orange-400/5" },
+  { name: "自动曝光", color: "text-yellow-400", border: "border-yellow-400/20", bg: "bg-yellow-400/5" },
+  { name: "设备状态查询", color: "text-emerald-400", border: "border-emerald-400/20", bg: "bg-emerald-400/5" }
 ];
 
 const stats = [
@@ -46,16 +55,16 @@ export function RemoteCommand() {
               
               <div className="space-y-4">
                 {[
-                  { icon: faCommentDots, label: "群发消息", detail: "批量发送至指定好友" },
-                  { icon: faVideo, label: "发布视频", detail: "抖音、快手、小红书" },
-                  { icon: faRotate, label: "自动回复", detail: "AI + 关键词 + 欢迎语" },
-                  { icon: faUsers, label: "公域获客", detail: "评论区扫描、自动私信" },
-                  { icon: faGears, label: "执行SOP", detail: "自动化客户触达流程" },
+                  { icon: faCommentDots, label: "群发消息", detail: "批量发送至指定好友", color: "text-green-400", bg: "bg-green-400/20" },
+                  { icon: faVideo, label: "发布视频", detail: "抖音、快手、小红书", color: "text-purple-400", bg: "bg-purple-400/20" },
+                  { icon: faRotate, label: "自动回复", detail: "AI + 关键词 + 欢迎语", color: "text-cyan-400", bg: "bg-cyan-400/20" },
+                  { icon: faUsers, label: "公域获客", detail: "评论区扫描、自动私信", color: "text-amber-400", bg: "bg-amber-400/20" },
+                  { icon: faGears, label: "执行SOP", detail: "自动化客户触达流程", color: "text-indigo-400", bg: "bg-indigo-400/20" },
                 ].map((item, i) => (
                  <Reveal key={i} delay={200 + i * 100} threshold={0.1}>
                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer group">
                      <div className="flex items-center gap-4">
-                       <div className="h-10 w-10 rounded-lg bg-[#2563eb]/20 flex items-center justify-center text-[#2563eb]">
+                       <div className={`h-10 w-10 rounded-lg ${item.bg} flex items-center justify-center ${item.color}`}>
                          <FontAwesomeIcon icon={item.icon} className="text-base" />
                        </div>
                        <div>
@@ -63,7 +72,7 @@ export function RemoteCommand() {
                          <div className="text-xs text-slate-400">{item.detail}</div>
                        </div>
                      </div>
-                     <FontAwesomeIcon icon={faMobileScreenButton} className="text-sm text-slate-500 group-hover:text-[#2563eb] transition-colors" />
+                     <FontAwesomeIcon icon={faMobileScreenButton} className={`text-sm text-slate-500 group-hover:${item.color} transition-colors`} />
                    </div>
                  </Reveal>
                 ))}
@@ -107,8 +116,8 @@ export function RemoteCommand() {
               <div className="flex flex-wrap gap-2">
                 {commands.map((cmd, i) => (
                   <Reveal key={i} delay={700 + i * 50} threshold={0.1} direction="up" duration={300}>
-                    <span className="px-3 py-1.5 rounded-lg bg-navy-light border border-white/5 text-xs text-slate-300 hover:border-brand/40 transition-colors cursor-default">
-                      {cmd}
+                    <span className={`px-3 py-1.5 rounded-lg ${cmd.bg} border ${cmd.border} text-xs ${cmd.color} hover:brightness-125 transition-all cursor-default`}>
+                      {cmd.name}
                     </span>
                   </Reveal>
                 ))}

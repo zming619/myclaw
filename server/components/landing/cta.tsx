@@ -28,16 +28,16 @@ export function CTA() {
               {/* <Download className="h-8 w-8" /> */}
               <FontAwesomeIcon icon={faWindows} className="text-5xl text-blue-400" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1">
               <h3 className="text-2xl font-bold">Windows 客户端</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 支持 Win10 / Win11，用于电脑端稳定挂机执行 RPA 与微信自动化任务。
               </p>
             </div>
-            <Button size="lg" className="bg-brand hover:bg-brand/90 px-8 text-lg font-bold">
-              立即下载 (.exe)
+            <Button size="lg" className="w-full py-6 bg-brand hover:bg-brand/90 px-8 text-lg font-bold">
+              立即下载
             </Button>
-            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">版本: v1.3.22 | 大小: 1.58GB</div>
+            <div className="text-xs uppercase tracking-widest">版本: v1.3.22 | 大小: 1.58GB</div>
           </div>
 
           {/* Mobile Command (WeChat Mini Program) */}
