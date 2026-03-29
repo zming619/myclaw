@@ -19,14 +19,14 @@ const navLinks = [
 
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0">
+      <div className="container mx-auto flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white shadow-lg shadow-brand/20 group-hover:scale-105 transition-transform">
-               <FontAwesomeIcon icon={faCloud} className="text-xl" />
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-brand text-white shadow-lg shadow-brand/20 group-hover:scale-105 transition-transform">
+               <FontAwesomeIcon icon={faCloud} className="text-lg sm:text-xl" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">
+            <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
               {siteConfig.name.split(' ')[0]} <span className="text-brand">{siteConfig.name.split(' ')[1]}</span>
             </span>
           </Link>

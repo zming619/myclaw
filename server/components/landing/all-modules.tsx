@@ -131,14 +131,14 @@ const modules = [
   },
   { 
     name: "自动工作流", 
-    desc: "可视化配置触发条件与执行动作——消息触发、关键词触发、定时触发、新关注触发等", 
+    desc: "可视化配置触发条件 with 执行动作——消息触发、关键词触发、定时触发、新关注触发等", 
     icon: faDiagramProject, 
     color: "text-teal-500", 
     bg: "bg-teal-50" 
   },
   { 
     name: "设备管理", 
-    desc: "绑定 and 管理多台电脑设备，实时查看在线状态、CPU、内存，远程下发任务", 
+    desc: "绑定 with 管理多台电脑设备，实时查看在线状态、CPU、内存，远程下发任务", 
     icon: faDesktop, 
     color: "text-blue-700", 
     bg: "bg-blue-100" 
@@ -159,7 +159,7 @@ const modules = [
   },
   { 
     name: "卡密兑换/AI充值", 
-    desc: "卡密激活系统功能，AI用量余额管理 and 订阅套餐", 
+    desc: "卡密激活系统功能，AI用量余额管理 with 订阅套餐", 
     icon: faKey, 
     color: "text-purple-700", 
     bg: "bg-purple-100" 
@@ -168,35 +168,35 @@ const modules = [
 
 export function AllModules() {
   return (
-    <section id="modules" className="py-24 bg-white">
+    <section id="modules" className="py-16 sm:py-24 bg-white">
       <div className="container mx-auto px-4 sm:px-8">
-        <Reveal className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+        <Reveal className="text-center max-w-3xl mx-auto mb-10 sm:mb-16 space-y-4">
           <div className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 uppercase tracking-widest">
             ALL MODULES
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
             全部功能模块一览
           </h2>
-          <p className="text-lg text-muted-foreground leading-relaxed italic">
+          <p className="text-base sm:text-lg text-muted-foreground leading-relaxed italic">
             系统覆盖运营全场景，每个模块独立运行又协同联动
           </p>
         </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {modules.map((mod, i) => (
             <Reveal key={i} delay={i * 50} threshold={0.1}>
               <div
-                className="group p-8 rounded-3xl bg-surface border border-border/50 hover:bg-white hover:border-brand/40 hover:shadow-xl transition-all cursor-pointer h-full"
+                className="group p-6 sm:p-8 rounded-3xl bg-surface border border-border/50 hover:bg-white hover:border-brand/40 hover:shadow-xl transition-all cursor-pointer h-full"
               >
-                <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center gap-4 mb-3 sm:mb-4">
                   <div className={`h-10 w-10 flex-shrink-0 rounded-xl ${mod.bg} ${mod.color} flex items-center justify-center transition-transform group-hover:scale-110`}>
                     <FontAwesomeIcon icon={mod.icon} className="text-lg" />
                   </div>
-                  <div className="text-lg font-bold text-foreground group-hover:text-brand transition-colors">
+                  <div className="text-base sm:text-lg font-bold text-foreground group-hover:text-brand transition-colors">
                     {mod.name}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed group-hover:text-slate-600 transition-colors">
+                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed group-hover:text-slate-600 transition-colors">
                   {mod.desc}
                 </p>
               </div>

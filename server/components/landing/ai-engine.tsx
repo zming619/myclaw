@@ -17,10 +17,10 @@ import {
 
 const models = [
   { name: "通义千问 (Qwen)", desc: "qwen-plus · qwen-flash", icon: "Q", color: "text-purple-600", bg: "bg-purple-50" },
-  { name: "豆包 (Doubao)", desc: "doubao-1.5-pro · Embedding · TTS · ASR", icon: "D", color: "text-orange-600", bg: "bg-orange-50" },
+  { name: "豆包 (Doubao)", desc: "doubao-1.5-pro · TTS · ASR", icon: "D", color: "text-orange-600", bg: "bg-orange-50" },
   { name: "DeepSeek", desc: "deepseek-chat", icon: "DS", color: "text-blue-600", bg: "bg-blue-50" },
   { name: "扣子 (Coze)", desc: "Workflow API · 剪映集成", icon: "C", color: "text-green-600", bg: "bg-green-50" },
-  { name: "OpenAI兼容接口", desc: "可接入任何兼容API的模型", icon: "+", color: "text-slate-600", bg: "bg-slate-50" },
+  { name: "OpenAI兼容接口", desc: "可接入任何API的模型", icon: "+", color: "text-slate-600", bg: "bg-slate-50" },
 ];
 
 const ragFeatures = [
@@ -41,32 +41,32 @@ const scenarios = [
 
 export function AIEngine() {
   return (
-    <section className="py-24 bg-surface">
+    <section className="py-16 sm:py-24 bg-surface">
       <div className="container mx-auto px-4 sm:px-8">
-        <Reveal className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600">
+        <Reveal className="text-center max-w-3xl mx-auto mb-10 sm:mb-16 space-y-4">
+          <div className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-widest">
             AI ENGINE
           </div>
-          <h2 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-5xl">
             多模型AI引擎 + RAG知识库
           </h2>
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            灵活接入主流大模型，结合向量检索和知识库实现精准问答，让AI真正懂你的业务
+          <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+            灵活接入主流大模型，结合向量检索 and 知识库实现精准问答
           </p>
         </Reveal>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Models List */}
           <div className="space-y-6">
             <Reveal duration={500}>
-              <h3 className="text-xl font-bold mb-6">已集成AI模型</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">已集成AI模型</h3>
             </Reveal>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {models.map((model, i) => (
                 <Reveal key={model.name} delay={i * 100} threshold={0.1}>
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-border group hover:border-brand/40 transition-all cursor-default">
-                    <div className="flex items-center gap-4">
-                      <div className={`h-10 w-10 rounded-lg ${model.bg} ${model.color} flex items-center justify-center font-bold text-sm`}>
+                  <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-white border border-border group hover:border-brand/40 transition-all cursor-default">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-lg ${model.bg} ${model.color} flex items-center justify-center font-bold text-xs sm:text-sm`}>
                         {model.icon}
                       </div>
                       <div>
@@ -74,7 +74,7 @@ export function AIEngine() {
                         <div className="text-[10px] text-muted-foreground">{model.desc}</div>
                       </div>
                     </div>
-                    <FontAwesomeIcon icon={faChevronRight} className="text-xs text-muted-foreground group-hover:text-brand transition-colors" />
+                    <FontAwesomeIcon icon={faChevronRight} className="text-[10px] sm:text-xs text-muted-foreground group-hover:text-brand transition-colors" />
                   </div>
                 </Reveal>
               ))}
@@ -82,10 +82,10 @@ export function AIEngine() {
           </div>
 
           {/* RAG Details */}
-          <Reveal delay={200} className="p-10 rounded-3xl bg-navy text-white shadow-2xl space-y-10">
+          <Reveal delay={200} className="p-6 sm:p-10 rounded-3xl bg-navy text-white shadow-2xl space-y-8 sm:space-y-10">
             <div>
-              <h3 className="text-2xl font-bold mb-6">RAG 知识库检索增强</h3>
-              <div className="space-y-8">
+              <h3 className="text-xl sm:text-2xl font-bold mb-6">RAG 知识库检索增强</h3>
+              <div className="space-y-6 sm:space-y-8">
                 {ragFeatures.map((feature, i) => (
                   <Reveal key={i} delay={300 + i * 100} threshold={0.1} direction="right">
                     <div className="flex gap-4">
@@ -94,7 +94,7 @@ export function AIEngine() {
                       </div>
                       <div>
                         <h4 className="text-sm font-bold mb-1">{feature.title}</h4>
-                        <p className="text-xs text-slate-400 leading-relaxed">{feature.desc}</p>
+                        <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed">{feature.desc}</p>
                       </div>
                     </div>
                   </Reveal>
@@ -107,7 +107,7 @@ export function AIEngine() {
               <div className="grid grid-cols-2 gap-y-3">
                 {scenarios.map((s, i) => (
                   <Reveal key={i} delay={600 + i * 50} threshold={0.1}>
-                    <div className="flex items-center gap-2 text-xs text-slate-300">
+                    <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-300">
                       <FontAwesomeIcon icon={faCircleCheck} className="text-[10px] text-brand" />
                       {s.name}
                     </div>

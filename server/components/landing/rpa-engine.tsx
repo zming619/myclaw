@@ -31,7 +31,7 @@ export function RPAEngine() {
               <div className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600">
                 RPA ENGINE
               </div>
-              <h2 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
                 全平台RPA <br />
                 <span className="text-brand">自动化操作引擎</span>
               </h2>
@@ -73,15 +73,15 @@ export function RPAEngine() {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
             {platforms.map((platform, i) => (
               <Reveal key={platform.name} delay={i * 100} threshold={0.1}>
-                <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-surface border border-border group hover:border-brand/40 hover:bg-white hover:shadow-lg transition-all">
-                  <div className={`h-14 w-14 mb-4 ${platform.bgColor} rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <FontAwesomeIcon icon={platform.icon} className={`${platform.color} text-2xl`} />
+                <div className="flex flex-col items-center justify-center p-4 sm:p-6 rounded-2xl bg-surface border border-border group hover:border-brand/40 hover:bg-white hover:shadow-lg transition-all">
+                  <div className={`h-12 w-12 sm:h-14 sm:w-14 mb-3 sm:mb-4 ${platform.bgColor} rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <FontAwesomeIcon icon={platform.icon} className={`${platform.color} text-xl sm:text-2xl`} />
                   </div>
-                  <div className="text-lg font-bold mb-1">{platform.name}</div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-widest text-center">{platform.desc}</div>
+                  <div className="text-sm sm:text-lg font-bold mb-1">{platform.name}</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest text-center">{platform.desc}</div>
                 </div>
               </Reveal>
             ))}

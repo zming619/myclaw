@@ -41,8 +41,8 @@ export function RemoteCommand() {
       <div className="container mx-auto px-4 sm:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Dashboard Mockup */}
-          <Reveal className="relative order-2 lg:order-1" direction="left">
-            <div className="relative rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl">
+          <Reveal className="relative order-2 lg:order-1 overflow-x-auto pb-4 lg:pb-0" direction="left">
+            <div className="relative min-w-[320px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 sm:p-8 shadow-2xl">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-bold opacity-60">显示各指标</span>
@@ -86,7 +86,7 @@ export function RemoteCommand() {
               <div className="inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-sm font-medium text-brand border border-brand/20">
                 REMOTE COMMAND
               </div>
-              <h2 className="text-4xl font-bold tracking-tight sm:text-5xl leading-tight">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-5xl leading-tight">
                 手机下指令 <br />
                 电脑自动执行
               </h2>

@@ -28,8 +28,8 @@ export function Hero() {
             
             <Reveal delay={100}>
               <div className="flex flex-col gap-4">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 leading-[1.1] sm:text-6xl lg:text-7xl">
-                  一部手机 <br />
+                <h1 className="text-4xl font-bold tracking-tight text-slate-900 leading-[1.1] sm:text-6xl lg:text-7xl">
+                  一部手机 <br className="hidden sm:block" />
                   <span className="text-[#0ea5e9]">控制多台电脑干活</span>
                 </h1>
                 <p className="max-w-xl text-lg text-slate-500 sm:text-lg">
@@ -39,13 +39,13 @@ export function Hero() {
             </Reveal>
 
             <div className="flex flex-col gap-6">
-              <Reveal delay={200} className="flex flex-wrap gap-4">
-                <Button size="lg" className="h-16 gap-3 bg-[#2563eb] text-white px-8 text-lg font-bold hover:bg-[#2563eb]/90 border-0 rounded-xl shadow-lg shadow-blue-500/20">
-                  <FontAwesomeIcon icon={faWindows} className="text-xl" />
+              <Reveal delay={200} className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" className="h-14 sm:h-16 gap-3 bg-[#2563eb] text-white px-8 text-base sm:text-lg font-bold hover:bg-[#2563eb]/90 border-0 rounded-xl shadow-lg shadow-blue-500/20 w-full sm:w-auto">
+                  <FontAwesomeIcon icon={faWindows} className="text-lg sm:text-xl" />
                   Windows 客户端下载
                 </Button>
-                <Button size="lg" variant="outline" className="h-16 gap-3 border-slate-200 px-8 text-lg font-bold hover:bg-slate-50 rounded-xl">
-                  <FontAwesomeIcon icon={faQrcode} className="text-lg" />
+                <Button size="lg" variant="outline" className="h-14 sm:h-16 gap-3 border-slate-200 px-8 text-base sm:text-lg font-bold hover:bg-slate-50 rounded-xl w-full sm:w-auto">
+                  <FontAwesomeIcon icon={faQrcode} className="text-base sm:text-lg" />
                   手机移动端控制
                 </Button>
               </Reveal>

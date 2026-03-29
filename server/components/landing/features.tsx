@@ -56,18 +56,18 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="py-24 bg-surface">
+    <section id="features" className="py-16 sm:py-24 bg-surface">
       <div className="container mx-auto px-4 sm:px-8">
-        <Reveal className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <Reveal className="text-center max-w-3xl mx-auto mb-10 sm:mb-16 space-y-4">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
             六大核心能力，覆盖全链路运营
           </h2>
-          <p className="text-lg text-muted-foreground italic">
-            从公域流量获取到私域精细化运营，从内容创作到智能客服，一套系统全部搞定
+          <p className="text-base sm:text-lg text-muted-foreground italic px-2">
+            从公域流量获取到私域精细化运营，一套系统全部搞定
           </p>
         </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {features.map((feature, index) => (
             <Reveal 
               key={index} 
@@ -75,15 +75,15 @@ export function Features() {
               className="h-full"
             >
               <div
-                className="group relative h-full p-8 rounded-xl bg-white transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+                className="group relative h-full p-6 sm:p-8 rounded-xl bg-white transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-slate-100/50"
               >
-                <div className={`mb-6 inline-flex p-3 rounded-xl ${feature.bg} ${feature.color}`}>
-                  <FontAwesomeIcon icon={feature.icon} className="text-xl" />
+                <div className={`mb-4 sm:mb-6 inline-flex p-3 rounded-xl ${feature.bg} ${feature.color}`}>
+                  <FontAwesomeIcon icon={feature.icon} className="text-lg sm:text-xl" />
                 </div>
-                <h3 className="text-lg font-bold mb-3 text-foreground group-hover:text-brand transition-colors">
+                <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 text-foreground group-hover:text-brand transition-colors">
                   {feature.title}
                 </h3>
-                <p className="text-sm text-slate-500 text-muted-foreground leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                   {feature.description}
                 </p>
               </div>
