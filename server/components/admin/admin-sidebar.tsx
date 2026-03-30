@@ -27,17 +27,17 @@ import {
 const navigation = [
   {
     title: "模型设置",
-    href: "/models",
+    href: "/admin/models",
     icon: BotMessageSquareIcon,
   },
   {
     title: "微信自动回复",
-    href: "/wechat-auto-replies",
+    href: "/admin/wechat-auto-replies",
     icon: MessageSquareReplyIcon,
   },
   {
     title: "系统设置",
-    href: "/settings",
+    href: "/admin/settings",
     icon: Settings2Icon,
   },
 ]
